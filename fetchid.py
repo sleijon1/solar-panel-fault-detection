@@ -45,16 +45,9 @@ def nearest_station_id(my_cords, stations):
     print(len(stations))
     for station in stations:
         dist = distance_to_station(my_cords,[station['latitude'], station['longitude']])
-        #print(dist)
         if dist < smallest_distance:
             smallest_distance = dist
             smallest_distance_id = station['id']
-            #smallest_latitude = station['latitude']
-            #smallest_longitude = station['longitude']
     return  smallest_distance_id
-    
 
-#jprint(data['station'][2]['id'])
 print(return_nearest_station(bunkern, global_irradiance))
-#print(result[0][0])
-print("ENDED")
