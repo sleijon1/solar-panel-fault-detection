@@ -14,6 +14,8 @@ humidity = "6"
 def return_nearest_station(pv_cords, parameter_type):
     """fetches data from api.
     
+    pv_cords -- A latitude and longitude coordinate (ex: [54.22,11.34])
+    paramter_type -- The typ of parameter (ex: "16")    
     """
     url = "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/" + parameter_type + ".json"
     data = requests.get(url)
@@ -37,7 +39,7 @@ def distance_to_station(my_cords, station_cords):
 
 def nearest_station_id(my_cords, stations):
     """Returns the station with the smallest distance to chosen coordinate.
-
+    
     """
     smallest_distance = float('inf') #max value for float
     for station in stations:
