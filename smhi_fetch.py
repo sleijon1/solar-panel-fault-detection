@@ -1,6 +1,12 @@
+
+# -*- coding: utf-8 -*-
+import requests
+from sklearn.metrics.pairwise import haversine_distances
+from math import radians
 import requests
 import json
 import csv
+
 
 # Default parameters to use
 PARAMETERS = {
@@ -12,6 +18,55 @@ PARAMETERS = {
         "air_pressure_id":9
 }
 
+
+def return_nearest_station(pv_cords, parameter_ids):
+    """fetches data from api.
+    
+    pv_cords -- A latitude and longitude coordinate (ex: [54.22,11.34])
+    paramter_type -- The typ of parameter (ex: "16")    
+    """
+    station_ids = []
+    for parameter_id in parameter_ids:
+        url = "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/" + str(parameter_id) + ".json"
+        data = requests.get(url)
+        data = data.json()
+        station_id = nearest_station_id(pv_cords, data['station'])
+        station_ids.append(station_id)
+    return station_ids
+
+#with open('parameter1.json') as f:
+#  data2 = json.load(f)
+
+
+def distance_to_station(my_cords, station_cords):    
+    """Calculates distance from one coordinate to another.
+
+    """
+    my_cords_in_radians = [radians(_) for _ in my_cords]
+    station_cords_in_radians = [radians(_) for _ in station_cords]
+    result = haversine_distances([my_cords_in_radians, station_cords_in_radians])
+    result = result * 6371000/1000  # multiply by Earth radius to get kilometers
+    return result[1][0]
+
+
+def nearest_station_id(my_cords, stations):
+    """Returns the station with the smallest distance to chosen coordinate.
+    
+    """
+    smallest_distance = float('inf') #max value for float
+    for station in stations:
+        dist = distance_to_station(my_cords,[station['latitude'], station['longitude']])
+        if dist < smallest_distance:
+            smallest_distance = dist
+            smallest_distance_id = station['id']
+            station_coordinates = [station['latitude'], station["longitude"]]
+    #print(smallest_distance)
+    return smallest_distance_id
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
 def fetch_smhi_parameter(parameter_id, station_id, period, version):
     """Makes API call to retrieve one parameter.
 
@@ -22,30 +77,29 @@ def fetch_smhi_parameter(parameter_id, station_id, period, version):
     period -- time frame of retrieval
     version -- version of SMHI API
     """
-
     base_url = r"https://opendata-download-metobs.smhi.se/"
-    api_call = r"api/version/"+version+"/parameter/"+parameter_id \
-        +"/station/"+station_id+"/period/"+period+"/data.json"
+    api_call = r"api/version/"+version+"/parameter/"+str(parameter_id) \
+        +"/station/"+str(station_id)+"/period/"+period+"/data.json"
     url = base_url + api_call
     response = requests.get(url)
     json_data = json.loads(response.text)
 
     return json_data
 
-def fetch_smhi_parameters(station_id, period="latest-months", version="latest", parameters=PARAMETERS):
+def fetch_smhi_parameters(station_ids, parameters, period="latest-months", version="latest"):
     """Makes API call to retrieve multiple parameters.
 
 
     Keyword arguments:
-    station_id -- SMHI id of station to retrieve from
+    station_ids -- list of SMHI ids of stations to retrieve from
     period -- time frame of retrieval
     version -- version of SMHI API
     parameters -- parameters to retrieve
     """
 
     parameter_dicts = {}
-    for parameter in parameters.keys():
-        parameter_data = fetch_smhi_parameter(str(parameters[parameter]),
+    for station_id, parameter in zip(station_ids, parameters.keys()):
+        parameter_data = fetch_smhi_parameter(parameters[parameter],
                                               station_id, period, version)
         save_json(parameter_data, parameter)
         #parameter_data = read_json(parameter)
@@ -114,14 +168,21 @@ def read_json(filename, extension=".txt"):
         json_data = json.load(readfile)
     return json_data
 
-def get_smhi_data_from_station(station_id):
+def get_smhi_data_from_stations(station_ids, parameters):
     """Fetches SMHI data and stores it using csv-format
 
     Keyword arguments:
     station_id -- id of station to retrieve from
     """
 
-    data = fetch_smhi_parameters(station_id)
-    save_smhi_parameters_to_csv(data)
+    data = fetch_smhi_parameters(station_ids, parameters)
+    return data
 
-get_smhi_data_from_station("159880")
+def get_smhi_data_from_coordinates(latitude, longitude, parameters=PARAMETERS):
+    station_ids = return_nearest_station([latitude, longitude], parameters.values())
+    data = get_smhi_data_from_stations(station_ids, parameters)
+    return data
+
+if __name__ == "__main__":
+    data = get_smhi_data_from_coordinates(59.938480, 16.862620)
+    save_smhi_parameters_to_csv(data)
