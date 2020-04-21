@@ -5,8 +5,9 @@ from sklearn.metrics.pairwise import haversine_distances
 from math import radians
 import requests
 import json
+import time
 import csv
-
+from datetime import datetime
 
 # Default parameters to use
 PARAMETERS = {
@@ -82,11 +83,13 @@ def fetch_smhi_parameter(parameter_id, station_id, period, version):
         +"/station/"+str(station_id)+"/period/"+period+"/data.json"
     url = base_url + api_call
     response = requests.get(url)
+    
     json_data = json.loads(response.text)
-
+    #json_formatted_str = json.dumps(json_data, indent=2)
+    #print(json_formatted_str)
     return json_data
 
-def fetch_smhi_parameters(station_ids, parameters, period="latest-months", version="latest"):
+def fetch_smhi_parameters(station_ids, parameters, period="latest-day", version="latest"):
     """Makes API call to retrieve multiple parameters.
 
 
@@ -103,14 +106,41 @@ def fetch_smhi_parameters(station_ids, parameters, period="latest-months", versi
                                               station_id, period, version)
         save_json(parameter_data, parameter)
         #parameter_data = read_json(parameter)
+        #print(parameter_data["value"])
         data_points = parameter_data["value"]
         parameter_dict = {}
-        for data_point in data_points:
-            parameter_dict[data_point["date"]] = data_point["value"]
-        parameter_dicts[parameter] = parameter_dict
+        if data_points is not None:
+            for data_point in data_points:
+                parameter_dict[data_point["date"]] = data_point["value"]
+            parameter_dicts[parameter] = parameter_dict
     return parameter_dicts
 
-def save_smhi_parameters_to_csv(parameter_dicts):
+def get_strong_data(start_date, end_date, latitude, longitude):
+    start_date = datetime.fromtimestamp(start_date/1000)
+    end_date = datetime.fromtimestamp(end_date/1000)
+    #print("enddate: " + str(end_date))
+    
+    url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
+     '&h1=' + str(start_date.hour) +'&m2='+ str(end_date.month) +'&d2='+ str(end_date.day) +'&y2='+ str(end_date.year) +'&h2=' + str(end_date.hour) + '&lat='+ str(latitude) +'&lon='+ str(longitude) +'&lev=0'
+     
+    data = requests.get(url)
+    #print(data.text)
+    lines = data.text.splitlines()
+    print(lines)
+    sunhours = []
+    for line in lines:
+        date = line.split()
+        year = int(date[0])
+        month = int(date[1])
+        day = int(date[2])
+        hour = int(date[3])
+        d = datetime(year,month,day,hour).timestamp()
+        print(datetime.fromtimestamp(d))
+        sunhours.append(date[4])
+        
+    return sunhours
+
+def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
     """Saves parameters to smhi.csv
 
 
@@ -118,8 +148,11 @@ def save_smhi_parameters_to_csv(parameter_dicts):
     parameter_dicts -- dictionary containing dictionaries of parameters
     """
 
+    
+    
     # Get all unixtimestamps (dates)
     dates = []
+    remove_dates = []
     for parameter in parameter_dicts:
         parameter_dict = parameter_dicts[parameter]
 
@@ -127,6 +160,16 @@ def save_smhi_parameters_to_csv(parameter_dicts):
             if date not in dates:
                 dates.append(date)
 
+
+    for date in dates:
+        date_t = datetime.utcfromtimestamp(date/1000)
+        if date_t.day == datetime.utcnow().day and date_t.month == datetime.utcnow().month and date_t.year == datetime.utcnow().year:
+            remove_dates.append(date)
+    
+    for date in remove_dates:
+        dates.remove(date)
+        
+        
     # write to csv
     file_handle = open('smhi.csv', 'w', newline='')
     with file_handle:
@@ -136,6 +179,8 @@ def save_smhi_parameters_to_csv(parameter_dicts):
             titles.append(parameter)
         writer.writerow(titles)
         for date in dates:
+           # date_t = datetime.utcfromtimestamp(date/1000)
+            #print(date_t)
             row = [date]
             for parameter in parameter_dicts:
                 parameter_dict = parameter_dicts[parameter]
@@ -146,6 +191,10 @@ def save_smhi_parameters_to_csv(parameter_dicts):
                     value = None
                 row.append(value)
             writer.writerow(row)
+    
+    strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
+    print(strong_data)
+    
 
 def save_json(data, filename, extension=".txt"):
     """Saves json-data in filename
@@ -184,5 +233,7 @@ def get_smhi_data_from_coordinates(latitude, longitude, parameters=PARAMETERS):
     return data
 
 if __name__ == "__main__":
-    data = get_smhi_data_from_coordinates(59.938480, 16.862620)
-    save_smhi_parameters_to_csv(data)
+    longitude = 16.862620
+    latitude = 59.938480
+    data = get_smhi_data_from_coordinates(latitude, longitude)
+    save_smhi_parameters_to_csv(data, latitude, longitude)
