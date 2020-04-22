@@ -7,11 +7,11 @@ import requests
 import json
 import time
 import csv
-from datetime import datetime
+from datetime import datetime,timezone
 
 # Default parameters to use
 PARAMETERS = {
-        #"sun_hours_id":10
+        #sun_hours_weak_id":10,
         "air_temperature_id":1,
         "air_humidity_id":6,
         "precipitation_id":7,
@@ -89,7 +89,7 @@ def fetch_smhi_parameter(parameter_id, station_id, period, version):
     #print(json_formatted_str)
     return json_data
 
-def fetch_smhi_parameters(station_ids, parameters, period="latest-day", version="latest"):
+def fetch_smhi_parameters(station_ids, parameters, period="latest-months", version="latest"):
     """Makes API call to retrieve multiple parameters.
 
 
@@ -116,8 +116,8 @@ def fetch_smhi_parameters(station_ids, parameters, period="latest-day", version=
     return parameter_dicts
 
 def get_strong_data(start_date, end_date, latitude, longitude):
-    start_date = datetime.fromtimestamp(start_date/1000)
-    end_date = datetime.fromtimestamp(end_date/1000)
+    start_date = datetime.utcfromtimestamp(start_date/1000)
+    end_date = datetime.utcfromtimestamp(end_date/1000)
     #print("enddate: " + str(end_date))
     
     url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
@@ -126,17 +126,18 @@ def get_strong_data(start_date, end_date, latitude, longitude):
     data = requests.get(url)
     #print(data.text)
     lines = data.text.splitlines()
-    print(lines)
-    sunhours = []
+  
+    sunhours = {}
     for line in lines:
         date = line.split()
         year = int(date[0])
         month = int(date[1])
         day = int(date[2])
         hour = int(date[3])
-        d = datetime(year,month,day,hour).timestamp()
-        print(datetime.fromtimestamp(d))
-        sunhours.append(date[4])
+        #print(datetime(year,month,day,hour))
+        d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
+        sunhours[int(d) * 1000] = date[4]
+
         
     return sunhours
 
@@ -160,16 +161,21 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
             if date not in dates:
                 dates.append(date)
 
-
+    
     for date in dates:
         date_t = datetime.utcfromtimestamp(date/1000)
+        #print(date_t)
         if date_t.day == datetime.utcnow().day and date_t.month == datetime.utcnow().month and date_t.year == datetime.utcnow().year:
             remove_dates.append(date)
     
     for date in remove_dates:
         dates.remove(date)
-        
-        
+   
+       
+    strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
+    parameter_dicts["sun_hours_id"] = strong_data
+    
+    #print(strong_data)
     # write to csv
     file_handle = open('smhi.csv', 'w', newline='')
     with file_handle:
@@ -179,8 +185,6 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
             titles.append(parameter)
         writer.writerow(titles)
         for date in dates:
-           # date_t = datetime.utcfromtimestamp(date/1000)
-            #print(date_t)
             row = [date]
             for parameter in parameter_dicts:
                 parameter_dict = parameter_dicts[parameter]
@@ -188,12 +192,12 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
                 try:
                     value = parameter_dict[date]
                 except KeyError:
+                    #print(date)
                     value = None
+                    
                 row.append(value)
             writer.writerow(row)
     
-    strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
-    print(strong_data)
     
 
 def save_json(data, filename, extension=".txt"):
