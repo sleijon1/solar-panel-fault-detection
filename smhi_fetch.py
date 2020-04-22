@@ -8,6 +8,9 @@ import json
 import time
 import csv
 from datetime import datetime,timezone
+import pandas as pd 
+from contextlib import closing
+import codecs
 
 # Default parameters to use
 PARAMETERS = {
@@ -68,7 +71,84 @@ def nearest_station_id(my_cords, stations):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def fetch_smhi_parameter(parameter_id, station_id, period, version):
+
+def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
+    """Makes API call to retrieve one parameter.
+
+
+    Keyword arguments:
+    parameter_id -- SMHI id of retrieved parameter
+    station_id -- SMHI id of station to retrieve from
+    period -- time frame of retrieval
+    version -- version of SMHI API
+    """
+    base_url = r"https://opendata-download-metobs.smhi.se/"
+    api_call = r"api/version/"+version+"/parameter/"+str(parameter_id) \
+        +"/station/"+str(station_id)+"/period/"+period+"/data.csv"
+    url = base_url + api_call
+    #print(url)
+    response = requests.get(url)
+    #print(response.text)
+    return(response.text)   
+
+def fetch_smhi_parameters_csv(station_ids, parameters, period="corrected-archive", version="latest"):
+    #print(parameters[])
+    #data = fetch_smhi_parameter_csv(station_ids[0], parameters["air_temperature_id"], period, version)
+    
+
+    parameter_dicts = {}
+    for station_id, parameter in zip(station_ids, parameters.keys()):
+        parameter_data = fetch_smhi_parameter_csv(station_id, parameters[parameter], period, version)
+
+        cutoff = parameter_data.find('2012')
+        parameter_data = parameter_data[cutoff:]
+        parameter_dict = {}
+            
+        lines = parameter_data.splitlines()
+        for line in lines:
+            row = line.split(';')
+            
+            date = row[0].split('-')
+            if(date == ['']):
+                print("fffffffffffffffffffffffffff")
+                continue
+            year = int(date[0])
+            month = int(date[1])
+            day = int(date[2])
+            hour = int(row[1].split(':')[0])
+            value = row[2]
+            d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
+            parameter_dict[int(d) * 1000] = value
+        parameter_dicts[parameter] = parameter_dict   
+    return parameter_dicts    
+    
+
+def fetch_smhi_parameters_json(station_ids, parameters, period="corrected-archive", version="latest"):
+    """Makes API call to retrieve multiple parameters.
+
+
+    Keyword arguments:
+    station_ids -- list of SMHI ids of stations to retrieve from
+    period -- time frame of retrieval
+    version -- version of SMHI API
+    parameters -- parameters to retrieve
+    """
+
+    parameter_dicts = {}
+    for station_id, parameter in zip(station_ids, parameters.keys()):
+        parameter_data = fetch_smhi_parameter_json(station_id, parameters[parameter], period, version)
+        #save_json(parameter_data, parameter)
+        #parameter_data = read_json(parameter)
+        #print(parameter_data["value"])
+        data_points = parameter_data["value"]
+        parameter_dict = {}
+        if data_points is not None:
+            for data_point in data_points:
+                parameter_dict[data_point["date"]] = data_point["value"]
+            parameter_dicts[parameter] = parameter_dict
+    return parameter_dicts
+
+def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
     """Makes API call to retrieve one parameter.
 
 
@@ -83,37 +163,14 @@ def fetch_smhi_parameter(parameter_id, station_id, period, version):
         +"/station/"+str(station_id)+"/period/"+period+"/data.json"
     url = base_url + api_call
     response = requests.get(url)
-    
     json_data = json.loads(response.text)
     #json_formatted_str = json.dumps(json_data, indent=2)
     #print(json_formatted_str)
     return json_data
 
-def fetch_smhi_parameters(station_ids, parameters, period="latest-months", version="latest"):
-    """Makes API call to retrieve multiple parameters.
 
 
-    Keyword arguments:
-    station_ids -- list of SMHI ids of stations to retrieve from
-    period -- time frame of retrieval
-    version -- version of SMHI API
-    parameters -- parameters to retrieve
-    """
 
-    parameter_dicts = {}
-    for station_id, parameter in zip(station_ids, parameters.keys()):
-        parameter_data = fetch_smhi_parameter(parameters[parameter],
-                                              station_id, period, version)
-        save_json(parameter_data, parameter)
-        #parameter_data = read_json(parameter)
-        #print(parameter_data["value"])
-        data_points = parameter_data["value"]
-        parameter_dict = {}
-        if data_points is not None:
-            for data_point in data_points:
-                parameter_dict[data_point["date"]] = data_point["value"]
-            parameter_dicts[parameter] = parameter_dict
-    return parameter_dicts
 
 def get_strong_data(start_date, end_date, latitude, longitude):
     start_date = datetime.utcfromtimestamp(start_date/1000)
@@ -156,8 +213,9 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
     remove_dates = []
     for parameter in parameter_dicts:
         parameter_dict = parameter_dicts[parameter]
-
+        print(parameter)
         for date in parameter_dict.keys():
+            print(date)
             if date not in dates:
                 dates.append(date)
 
@@ -172,12 +230,13 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
         dates.remove(date)
    
        
-    strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
-    parameter_dicts["sun_hours_id"] = strong_data
+    #strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
+    #parameter_dicts["sun_hours_id"] = strong_data
     
     #print(strong_data)
     # write to csv
     file_handle = open('smhi.csv', 'w', newline='')
+    print("We the best music")
     with file_handle:
         writer = csv.writer(file_handle)
         titles = ["date"]
@@ -228,7 +287,8 @@ def get_smhi_data_from_stations(station_ids, parameters):
     station_id -- id of station to retrieve from
     """
 
-    data = fetch_smhi_parameters(station_ids, parameters)
+    #data = fetch_smhi_parameters_json(station_ids, parameters)
+    data = fetch_smhi_parameters_csv(station_ids, parameters)
     return data
 
 def get_smhi_data_from_coordinates(latitude, longitude, parameters=PARAMETERS):
