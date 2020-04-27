@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import requests
 from sklearn.metrics.pairwise import haversine_distances
@@ -91,7 +90,7 @@ def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
     #print(response.text)
     return(response.text)   
 
-def fetch_smhi_parameters_csv(station_ids, parameters, period="corrected-archive", version="latest"):
+def fetch_smhi_parameters_csv(station_ids, parameters, period, version="latest"):
     #print(parameters[])
     #data = fetch_smhi_parameter_csv(station_ids[0], parameters["air_temperature_id"], period, version)
     
@@ -122,7 +121,7 @@ def fetch_smhi_parameters_csv(station_ids, parameters, period="corrected-archive
     return parameter_dicts    
     
 
-def fetch_smhi_parameters_json(station_ids, parameters, period="corrected-archive", version="latest"):
+def fetch_smhi_parameters_json(station_ids, parameters, period, version="latest"):
     """Makes API call to retrieve multiple parameters.
 
 
@@ -279,24 +278,25 @@ def read_json(filename, extension=".txt"):
         json_data = json.load(readfile)
     return json_data
 
-def get_smhi_data_from_stations(station_ids, parameters):
+def get_smhi_data_from_stations(station_ids, parameters, period):
     """Fetches SMHI data and stores it using csv-format
 
     Keyword arguments:
     station_id -- id of station to retrieve from
     """
-
-    #data = fetch_smhi_parameters_json(station_ids, parameters)
-    data = fetch_smhi_parameters_csv(station_ids, parameters)
+    if period == "corrected-archives":
+        data = fetch_smhi_parameters_csv(station_ids, parameters, period)
+    else:
+        data = fetch_smhi_parameters_json(station_ids, parameters, period)
     return data
 
-def get_smhi_data_from_coordinates(latitude, longitude, parameters=PARAMETERS):
+def get_smhi_data_from_coordinates(latitude, longitude, period, parameters=PARAMETERS):
     station_ids = return_nearest_station([latitude, longitude], parameters.values())
-    data = get_smhi_data_from_stations(station_ids, parameters)
+    data = get_smhi_data_from_stations(station_ids, parameters, period)
     return data
 
 if __name__ == "__main__":
     longitude = 16.862620
     latitude = 59.938480
-    data = get_smhi_data_from_coordinates(latitude, longitude)
+    data = get_smhi_data_from_coordinates(latitude, longitude, "latest-months")
     save_smhi_parameters_to_csv(data, latitude, longitude)
