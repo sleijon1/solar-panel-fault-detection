@@ -110,7 +110,6 @@ def fetch_smhi_parameters_csv(station_ids, parameters, period="corrected-archive
             
             date = row[0].split('-')
             if(date == ['']):
-                print("fffffffffffffffffffffffffff")
                 continue
             year = int(date[0])
             month = int(date[1])
@@ -213,9 +212,9 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
     remove_dates = []
     for parameter in parameter_dicts:
         parameter_dict = parameter_dicts[parameter]
-        print(parameter)
+        #print(parameter)
         for date in parameter_dict.keys():
-            print(date)
+            #print(date)
             if date not in dates:
                 dates.append(date)
 
@@ -236,7 +235,7 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
     #print(strong_data)
     # write to csv
     file_handle = open('smhi.csv', 'w', newline='')
-    print("We the best music")
+    print("Writing to csv...")
     with file_handle:
         writer = csv.writer(file_handle)
         titles = ["date"]
