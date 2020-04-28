@@ -5,6 +5,8 @@ import pgeocode
 import numpy as np
 
 
+WINDOWS = 0
+
 def create_files():
     with open('checkwatt_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
@@ -35,7 +37,10 @@ def create_files():
                 latitude = float(latitude)
                 longitude = float(longitude)
                 data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "latest-months")
-                path = "data\\" + building_id + ".csv"
+                if WINDOWS:
+                    path = "data\\" + building_id + ".csv"
+                else:
+                    path = "data/" + building_id + ".csv"
                 smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
                 print("Building done: " + building_id)
 
@@ -87,8 +92,13 @@ def write_checkwatt_data(building_id, building_data, verbose):
     smhi_col5 = []
     smhi_col6 = []
 
-    path = "data\\" + building_id + ".csv"
-    new_path = "data\\" + building_id + "_new.csv"
+    
+    if WINDOWS:
+        path = "data\\" + building_id + ".csv"
+        new_path = "data\\" + building_id + "_new.csv"
+    else:
+        path = "data/" + building_id + ".csv"
+        new_path = "data/" + building_id + "_new.csv"
 
     try:
         with open(path, "r") as read_obj:
