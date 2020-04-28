@@ -11,81 +11,117 @@ def create_files():
                 file_handle = open("data/" + str(file_name) + ".csv", 'w')
 
 
-def find_pointer(timestamp, reader):
-    row_count = sum(1 for row in reader)
-    for i in range(1, row_count):
-        row = next(reader)
-        if row[0] == timestamp:
-            return row, reader
-        
-    return None
-                
 def read_checkwatt_data():
     with open('checkwatt_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
-        row_count = 0
-        current_id = None
-        read_obj = None
-        write_obj = None
-        j = 0
+
+        checkwatt_dict = {}
+        previous_building_id = None
+        building_dict = {}
         for cw_row in reader:
+            building_id = cw_row[0]
+            if building_id != previous_building_id:
+                checkwatt_dict[previous_building_id] = building_dict
+                building_dict = {}
             date = cw_row[2]
             date = datetime(int(date[0:4]), int(date[4:6]), int(date[6:8]))
             #TODO not *1000 XD
             date_utctimestamp = int(date.replace(tzinfo=timezone.utc).timestamp())*1000
-            building_id = cw_row[0]
+        
+            if len(cw_row) != 58:
+                # Data read badly, skip 
+                continue
 
-            try:
-                if current_id != building_id:
-                    current_id = building_id
+            values = []
+            timestamps = []
+            for index in range(0, 24, 1):
+                # TODO remove *1000 on timestamp
+                values.append(float(cw_row[2*index+10].replace(',', '.')))
+                timestamps.append(date_utctimestamp + index*3600*1000)
 
-                    if read_obj is not None:
-                        read_obj.close()
-                    if write_obj is not None:
-                        write_obj.close()
-                        
-                    read_obj = open("data/" + str(current_id) + ".csv", 'r')
-                    write_obj = open("data/" + str(current_id) + "_new.csv", 'w', newline='')
-                    read_obj.readline()
-                    #csv_reader = csv.reader(read_obj)
-                    #csv_writer = csv.writer(write_obj)
+            for timestamp, value in zip(timestamps, values):
+                building_dict[timestamp] = value
+            previous_building_id = building_id
+    del checkwatt_dict[None]
+    return checkwatt_dict
 
-                    #first_row = next(csv_reader)
-                    #first_row.append("output")
-                    #csv_writer.writerow(first_row)
-                    print(date_utctimestamp)
-                values = []
-                for index in range(10, 58, 2):
-                    values.append(float(cw_row[index].replace(',', '.')))
-                    my_bool = False
-                    i = 0
-                print(read_obj)
-                for smhi_row in read_obj:
-                    smhi_row = smhi_row.split(',')
-                    j += 1 
-                    if int(smhi_row[0]) == date_utctimestamp:
-                        print("True")
-                        print(values)
-                        print(date_utctimestamp)
-                        my_bool = True
-                    if my_bool:
-                        smhi_row.append(values[i])
-                        i+=1
-                        if i == 24:
-                            my_bool = False
-                            #csv_writer.writerow(smhi_row)
-                            write_obj.writelines(smhi_row)
-                            row_count += 1
-            except:
-                #print("Could not write to: " + str(file_name))
-                pass
-        print(j)
-        if read_obj is not None:
-            read_obj.close()
-        if write_obj is not None:
-                write_obj.close()
-                        
+
+def write_checkwatt_data(building_id, building_data, verbose):
+    """
+    writes building data to a .csv file
+
+    """
+
+    smhi_col1 = []
+    smhi_col2 = []
+    smhi_col3 = []
+    smhi_col4 = []
+    smhi_col5 = []
+    smhi_col6 = []
+
+    path = building_id + ".csv"
+    new_path = building_id + "_new.csv"
+
+    try:
+        with open(path, "r") as read_obj:
+            reader = csv.DictReader(read_obj)
+
+            output = []
+            for row in reader:
+                date = int(row["date"])
+                smhi_col1.append(date)
+                smhi_col2.append(row["air_temperature_id"])
+                smhi_col3.append(row["air_humidity_id"])
+                smhi_col4.append(row["precipitation_id"])
+                smhi_col5.append(row["cloud_coverage_id"])
+                smhi_col6.append(row["air_pressure_id"])
+
+                try:
+                    value = building_data[date]
+                    output.append(value)
+                except KeyError:
+                    output.append(None)
+                    if verbose:
+                        print("KeyError: " + str(date) + " for id: " + building_id + ".")           
+
+        
+        with open(new_path, "w", newline='') as write_obj:
+            fieldnames =  ["date", "air_temperature_id", "air_humidity_id", \
+                "precipitation_id", "cloud_coverage_id", "air_pressure_id", "output"]
+            writer = csv.writer(write_obj)
+            writer.writerow(fieldnames)
+            rows = zip(smhi_col1, smhi_col2, smhi_col3, smhi_col4, smhi_col5, \
+                    smhi_col6, output)
+            for row in rows:
+                writer.writerow(row)
+
+        if verbose:
+            print("File " + path + " done.")
+        return True
+    except FileNotFoundError:
+        if verbose:
+            print("No .csv file found for " + building_id + ".")
+        return False
+
+
+def checkwatt(verbose=False):
+    checkwatt_data = read_checkwatt_data()
+    csvs_written = 0
+    csvs_not_found = 0
+    for building_id in checkwatt_data.keys():
+        wrote = write_checkwatt_data(building_id, checkwatt_data[building_id], verbose)
+        if wrote:
+            csvs_written += 1
+        else:
+            csvs_not_found += 1
+
+    print("###########################")
+    print("# Building_ids found: " + str(csvs_written+csvs_not_found) + "  #")
+    print("# Csv files written to: " + str(csvs_written) + " #")
+    print("# Missing csv files: " + str(csvs_not_found) + "   #")
+    print("###########################")
 
 if __name__ == "__main__":
-    #create_files()
-    read_checkwatt_data()
+    checkwatt(verbose=True)
+    
+
