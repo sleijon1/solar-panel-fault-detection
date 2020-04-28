@@ -14,11 +14,11 @@ import codecs
 # Default parameters to use
 PARAMETERS = {
         #sun_hours_weak_id":10,
-        "air_temperature_id":1,
-        "air_humidity_id":6,
-        "precipitation_id":7,
-        "cloud_coverage_id":16,
-        "air_pressure_id":9
+        #"air_temperature_id":1,
+        #"air_humidity_id":6,
+        "precipitation_id":7
+        #"cloud_coverage_id":16,
+        #"air_pressure_id":9
 }
 
 
@@ -63,7 +63,7 @@ def nearest_station_id(my_cords, stations):
             smallest_distance = dist
             smallest_distance_id = station['id']
             station_coordinates = [station['latitude'], station["longitude"]]
-    #print(smallest_distance)
+    print(smallest_distance_id, station_coordinates)
     return smallest_distance_id
 
 #--------------------------------------------------------------
@@ -161,6 +161,7 @@ def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
         +"/station/"+str(station_id)+"/period/"+period+"/data.json"
     url = base_url + api_call
     response = requests.get(url)
+    print(url)
     json_data = json.loads(response.text)
     #json_formatted_str = json.dumps(json_data, indent=2)
     #print(json_formatted_str)
@@ -196,7 +197,7 @@ def get_strong_data(start_date, end_date, latitude, longitude):
         
     return sunhours
 
-def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
+def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="smhi.csv"):
     """Saves parameters to smhi.csv
 
 
@@ -233,7 +234,7 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude):
     
     #print(strong_data)
     # write to csv
-    file_handle = open('smhi.csv', 'w', newline='')
+    file_handle = open(filename, 'w', newline='')
     print("Writing to csv...")
     with file_handle:
         writer = csv.writer(file_handle)
@@ -296,7 +297,7 @@ def get_smhi_data_from_coordinates(latitude, longitude, period, parameters=PARAM
     return data
 
 if __name__ == "__main__":
-    longitude = 16.862620
     latitude = 59.938480
+    longitude = 16.862620
     data = get_smhi_data_from_coordinates(latitude, longitude, "latest-months")
     save_smhi_parameters_to_csv(data, latitude, longitude)

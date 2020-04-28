@@ -1,15 +1,44 @@
 import csv
 from datetime import datetime, timezone
+import smhi_fetch
+import pgeocode
+import numpy as np
 
 
 def create_files():
     with open('checkwatt_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
+        skipped_buildings = 0
         for row in reader:
             if len(row['Id']) == 18:
-                file_name = row['Id']
-                file_handle = open("data/" + str(file_name) + ".csv", 'w')
+                building_id = row['Id']
+                latitude = row['Latitude']
+                longitude = row['Longitude']
+                zip_code =  row['ZipCode']
+                if zip_code == "0" and latitude == "null" and longitude == "null":
+                    print("No geographical data, skipping " + building_id)
+                    skipped_buildings += 1
+                    continue
+                
+                if latitude == "null" or longitude == "null":
+                    # get lat, long from zip code
+                    zip_code = zip_code[:3] + ' ' + zip_code[3:]
+                    nomi = pgeocode.Nominatim('se')
+                    df = nomi.query_postal_code(zip_code)
+                    #print(df)
+                    latitude = df['latitude']
+                    longitude = df['longitude']
+                    if np.isnan(latitude) or np.isnan(longitude):
+                        print("Couldn't retrieve lat,long from zip code for building " + building_id)
+                        skipped_buildings += 1
+                        continue
 
+                latitude = float(latitude)
+                longitude = float(longitude)
+                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "latest-months")
+                path = "data\\" + building_id + ".csv"
+                smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
+                print("Building done: " + building_id)
 
 def read_checkwatt_data():
     with open('checkwatt_data.csv', 'r') as csvfile:
@@ -59,8 +88,8 @@ def write_checkwatt_data(building_id, building_data, verbose):
     smhi_col5 = []
     smhi_col6 = []
 
-    path = building_id + ".csv"
-    new_path = building_id + "_new.csv"
+    path = "data\\" + building_id + ".csv"
+    new_path = "data\\" + building_id + "_new.csv"
 
     try:
         with open(path, "r") as read_obj:
@@ -122,6 +151,10 @@ def checkwatt(verbose=False):
     print("###########################")
 
 if __name__ == "__main__":
-    checkwatt(verbose=True)
+    #try:
+    #    create_files()
+    #except:
+    #    pass
+    checkwatt(verbose=False)
     
 
