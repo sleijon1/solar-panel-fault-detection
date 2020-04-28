@@ -63,7 +63,7 @@ def nearest_station_id(my_cords, stations):
             smallest_distance = dist
             smallest_distance_id = station['id']
             station_coordinates = [station['latitude'], station["longitude"]]
-    print(smallest_distance_id, station_coordinates)
+    #print(smallest_distance_id, station_coordinates)
     return smallest_distance_id
 
 #--------------------------------------------------------------
@@ -87,7 +87,6 @@ def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
     url = base_url + api_call
     #print(url)
     response = requests.get(url)
-    #print(response.text)
     return(response.text)   
 
 def fetch_smhi_parameters_csv(station_ids, parameters, period, version="latest"):
@@ -161,7 +160,7 @@ def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
         +"/station/"+str(station_id)+"/period/"+period+"/data.json"
     url = base_url + api_call
     response = requests.get(url)
-    print(url)
+    #print(url)
     json_data = json.loads(response.text)
     #json_formatted_str = json.dumps(json_data, indent=2)
     #print(json_formatted_str)

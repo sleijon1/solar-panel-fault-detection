@@ -25,7 +25,6 @@ def create_files():
                     zip_code = zip_code[:3] + ' ' + zip_code[3:]
                     nomi = pgeocode.Nominatim('se')
                     df = nomi.query_postal_code(zip_code)
-                    #print(df)
                     latitude = df['latitude']
                     longitude = df['longitude']
                     if np.isnan(latitude) or np.isnan(longitude):
@@ -94,16 +93,18 @@ def write_checkwatt_data(building_id, building_data, verbose):
     try:
         with open(path, "r") as read_obj:
             reader = csv.DictReader(read_obj)
+            fieldnames = reader.fieldnames
 
+            data_dict = {}
             output = []
+            for fieldname in fieldnames:
+                data_dict[fieldname] = []
+
             for row in reader:
                 date = int(row["date"])
-                smhi_col1.append(date)
-                smhi_col2.append(row["air_temperature_id"])
-                smhi_col3.append(row["air_humidity_id"])
-                smhi_col4.append(row["precipitation_id"])
-                smhi_col5.append(row["cloud_coverage_id"])
-                smhi_col6.append(row["air_pressure_id"])
+
+                for fieldname in fieldnames:
+                    data_dict[fieldname].append(row[fieldname])
 
                 try:
                     value = building_data[date]
@@ -115,14 +116,20 @@ def write_checkwatt_data(building_id, building_data, verbose):
 
         
         with open(new_path, "w", newline='') as write_obj:
-            fieldnames =  ["date", "air_temperature_id", "air_humidity_id", \
-                "precipitation_id", "cloud_coverage_id", "air_pressure_id", "output"]
+            data_dict['output'] = output
+            fieldnames.append("output")
             writer = csv.writer(write_obj)
             writer.writerow(fieldnames)
-            rows = zip(smhi_col1, smhi_col2, smhi_col3, smhi_col4, smhi_col5, \
-                    smhi_col6, output)
-            for row in rows:
+
+
+            length = len(data_dict[fieldnames[0]])
+            for i in range(0, length):
+                row = []
+                for fieldname in fieldnames:
+                    row.append(data_dict[fieldname][i])
                 writer.writerow(row)
+
+
 
         if verbose:
             print("File " + path + " done.")
@@ -144,17 +151,18 @@ def checkwatt(verbose=False):
         else:
             csvs_not_found += 1
 
-    print("###########################")
-    print("# Building_ids found: " + str(csvs_written+csvs_not_found) + "  #")
+    longest_line = "# Csv files written to: " + str(csvs_written) + " #"
+    length = len(longest_line)
+
+    print(length*"#")
+    print("# Building_ids found: " + str(csvs_written+csvs_not_found) + (length-(len(str(csvs_written+csvs_not_found))+23))*" " +  "#")
     print("# Csv files written to: " + str(csvs_written) + " #")
-    print("# Missing csv files: " + str(csvs_not_found) + "   #")
-    print("###########################")
+    print("# Missing csv files: " + str(csvs_not_found) + (length-(len(str(csvs_not_found))+22))*" " +  "#")
+    print(length*"#")
 
 if __name__ == "__main__":
-    #try:
-    #    create_files()
-    #except:
-    #    pass
+    try:
+        create_files()
+    except:
+        print("SMHI_FETCH CRASHING")
     checkwatt(verbose=False)
-    
-
