@@ -5,9 +5,11 @@ import pgeocode
 import numpy as np
 
 
-WINDOWS = 0
-
 def create_files():
+    """ Reads checkwatt_metadata.csv and creates files for every building
+    with available zip-code/(lat,long)-coords.
+
+    """
     with open('checkwatt_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
@@ -37,14 +39,16 @@ def create_files():
                 latitude = float(latitude)
                 longitude = float(longitude)
                 data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "latest-months")
-                if WINDOWS:
-                    path = "data\\" + building_id + ".csv"
-                else:
-                    path = "data/" + building_id + ".csv"
+                path = "data/" + building_id + ".csv"
                 smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
                 print("Building done: " + building_id)
 
+
 def read_checkwatt_data():
+    """ Returns values of power output for all buildings contained in 
+    checkwatt_data.csv as dict
+
+    """
     with open('checkwatt_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
 
@@ -92,13 +96,8 @@ def write_checkwatt_data(building_id, building_data, verbose):
     smhi_col5 = []
     smhi_col6 = []
 
-    
-    if WINDOWS:
-        path = "data\\" + building_id + ".csv"
-        new_path = "data\\" + building_id + "_new.csv"
-    else:
-        path = "data/" + building_id + ".csv"
-        new_path = "data/" + building_id + "_new.csv"
+    path = "data/" + building_id + ".csv"
+    new_path = "data/" + building_id + "_new.csv"
 
     try:
         with open(path, "r") as read_obj:
