@@ -5,12 +5,12 @@ import pgeocode
 import numpy as np
 
 
-def create_files():
-    """ Reads checkwatt_metadata.csv and creates files for every building
-    with available zip-code/(lat,long)-coords.
+def create_building_files():
+    """ Reads hpsolartech_metadata.csv and creates .csv files containing smhi data
+    for every building with available zip-code/(lat,long)-coords.
 
     """
-    with open('checkwatt_metadata.csv', 'r') as csvfile:
+    with open('hpsolartech_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
         for row in reader:
@@ -44,21 +44,21 @@ def create_files():
                 print("Building done: " + building_id)
 
 
-def read_checkwatt_data():
+def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 
-    checkwatt_data.csv as dict
+    hpsolartech_data.csv as a dictionary
 
     """
-    with open('checkwatt_data.csv', 'r') as csvfile:
+    with open('hpsolartech_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
 
-        checkwatt_dict = {}
+        hpsolartech_dict = {}
         previous_building_id = None
         building_dict = {}
         for cw_row in reader:
             building_id = cw_row[0]
             if building_id != previous_building_id:
-                checkwatt_dict[previous_building_id] = building_dict
+                hpsolartech_dict[previous_building_id] = building_dict
                 building_dict = {}
             date = cw_row[2]
             date = datetime(int(date[0:4]), int(date[4:6]), int(date[6:8]))
@@ -79,23 +79,18 @@ def read_checkwatt_data():
             for timestamp, value in zip(timestamps, values):
                 building_dict[timestamp] = value
             previous_building_id = building_id
-    del checkwatt_dict[None]
-    return checkwatt_dict
+    del hpsolartech_dict[None]
+    return hpsolartech_dict
 
 
-def write_checkwatt_data(building_id, building_data, verbose):
+def write_hpsolartech_data(building_id, building_data, verbose):
+    """ writes building data to a .csv file
+    
+    building_id -- id of building
+    building_data -- dictionary mapping timestamps to values
+    verbose -- bool for more information
+
     """
-    writes building data to a .csv file
-
-    """
-
-    smhi_col1 = []
-    smhi_col2 = []
-    smhi_col3 = []
-    smhi_col4 = []
-    smhi_col5 = []
-    smhi_col6 = []
-
     path = "data/" + building_id + ".csv"
     new_path = "data/" + building_id + "_new.csv"
 
@@ -149,12 +144,16 @@ def write_checkwatt_data(building_id, building_data, verbose):
         return False
 
 
-def checkwatt(verbose=False):
-    checkwatt_data = read_checkwatt_data()
+def fill_hpsolartech_files(verbose=False):
+    """Fills all .csv files with power output column from hpsolartech_data.csv file
+    
+    verbose -- bool for more information
+    """
+    hpsolartech_data = read_hpsolartech_data()
     csvs_written = 0
     csvs_not_found = 0
-    for building_id in checkwatt_data.keys():
-        wrote = write_checkwatt_data(building_id, checkwatt_data[building_id], verbose)
+    for building_id in hpsolartech_data.keys():
+        wrote = write_hpsolartech_data(building_id, hpsolartech_data[building_id], verbose)
         if wrote:
             csvs_written += 1
         else:
@@ -171,7 +170,7 @@ def checkwatt(verbose=False):
 
 if __name__ == "__main__":
     try:
-        create_files()
+        create_building_files()
     except:
         print("SMHI_FETCH CRASHING")
-    checkwatt(verbose=False)
+    fill_hpsolartech_files(verbose=False)
