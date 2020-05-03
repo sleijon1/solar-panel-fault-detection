@@ -4,18 +4,28 @@ import smhi_fetch
 import pgeocode
 import numpy as np
 
+def find_building_ids():
+    ids = []
+    with open('hpsolartech_data.csv', 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=';')
+        for row in reader:
+            if row[0] not in ids:
+                ids.append(row[0])
+    return ids
+
 
 def create_building_files():
     """ Reads hpsolartech_metadata.csv and creates .csv files containing smhi data
     for every building with available zip-code/(lat,long)-coords.
 
     """
+    avail_ids = find_building_ids()
     building_count = 0
     with open('hpsolartech_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
         for row in reader:
-            if len(row['Id']) == 18:
+            if len(row['Id']) == 18 and row['Id'] in avail_ids:
                 building_id = row['Id']
                 latitude = row['Latitude']
                 longitude = row['Longitude']
@@ -61,7 +71,6 @@ def read_hpsolartech_data():
         for cw_row in reader:
             building_id = cw_row[0]
             if building_id != previous_building_id:
-                hpsolartech_dict[previous_building_id] = building_dict
                 building_dict = {}
             date = cw_row[2]
             date = datetime(int(date[0:4]), int(date[4:6]), int(date[6:8]))
@@ -69,7 +78,7 @@ def read_hpsolartech_data():
             date_utctimestamp = int(date.replace(tzinfo=timezone.utc).timestamp())*1000
         
             if len(cw_row) != 58:
-                # Data read badly, skip 
+                # Data read badly, skip
                 continue
 
             values = []
@@ -81,6 +90,8 @@ def read_hpsolartech_data():
 
             for timestamp, value in zip(timestamps, values):
                 building_dict[timestamp] = value
+
+            hpsolartech_dict[previous_building_id] = building_dict
             previous_building_id = building_id
     del hpsolartech_dict[None]
     return hpsolartech_dict
@@ -155,6 +166,7 @@ def fill_hpsolartech_files(verbose=False):
     hpsolartech_data = read_hpsolartech_data()
     csvs_written = 0
     csvs_not_found = 0
+    print(len(hpsolartech_data.keys()))
     for building_id in hpsolartech_data.keys():
         wrote = write_hpsolartech_data(building_id, hpsolartech_data[building_id], verbose)
         if wrote:
