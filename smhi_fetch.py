@@ -14,34 +14,72 @@ import codecs
 # Default parameters to use
 PARAMETERS = {
         #sun_hours_weak_id":10,
-        #"air_temperature_id":1,
-        #"air_humidity_id":6,
-        "precipitation_id":7
-        #"cloud_coverage_id":16,
-        #"air_pressure_id":9
+        "air_temperature_id":1,
+        "air_humidity_id":6,
+        "precipitation_id":7,
+        "cloud_coverage_id":16,
+        "air_pressure_id":9
 }
 
+# Smhi periods
+PERIODS = {
+    "latest-hour":0,
+    "latest-day":1,
+    "latest-months":2,
+    "corrected-archive":3
+}
 
-def return_nearest_station(pv_cords, parameter_ids):
+def return_nearest_station(pv_cords, parameter_ids, period):
     """fetches data from api.
     
     pv_cords -- A latitude and longitude coordinate (ex: [54.22,11.34])
-    paramter_type -- The typ of parameter (ex: "16")    
+    paramter_type -- The typ of parameter (ex: "16")
+    period -- time frame of retrieval
     """
     station_ids = []
     for parameter_id in parameter_ids:
-        url = "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/" + str(parameter_id) + ".json"
+        url = "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/" + \
+            str(parameter_id) + ".json"
         data = requests.get(url)
         data = data.json()
-        station_id = nearest_station_id(pv_cords, data['station'])
+        station_id = nearest_station_id(pv_cords, data['station'], period)
         station_ids.append(station_id)
     return station_ids
 
-#with open('parameter1.json') as f:
-#  data2 = json.load(f)
+
+def nearest_station_id(my_cords, stations, period):
+    """Returns the station id with the smallest distance to chosen coordinate
+    or None if no station has the given period.
+    
+    period -- time frame of retrieval
+    """
+    distances = []
+    for station in stations:
+        dist = distance_to_station(my_cords,[station['latitude'], station['longitude']])
+        distances.append((station, dist))
+    sorted_distances = sorted(distances, key=lambda x: x[1])
+    
+    smallest_distance = float('inf') #max value for float
+    smallest_distance_id = None
+    for station, dist in sorted_distances:
+        url = station["link"][0]["href"]
+        data = requests.get(url)
+        data = data.json()
+        available_period = data["period"][0]["key"]
+        if dist > 100:
+            print("Distance to nearest station above 100km. Disregarding parameter.")
+            break
+        if PERIODS[available_period] <= PERIODS[period]:
+            smallest_distance_id = station['id']
+            break
+
+    if smallest_distance_id is None:
+        print("COULD NOT FIND STATION FOR GIVEN PERIOD.")
+
+    return smallest_distance_id
 
 
-def distance_to_station(my_cords, station_cords):    
+def distance_to_station(my_cords, station_cords):
     """Calculates distance from one coordinate to another.
 
     """
@@ -50,21 +88,6 @@ def distance_to_station(my_cords, station_cords):
     result = haversine_distances([my_cords_in_radians, station_cords_in_radians])
     result = result * 6371000/1000  # multiply by Earth radius to get kilometers
     return result[1][0]
-
-
-def nearest_station_id(my_cords, stations):
-    """Returns the station with the smallest distance to chosen coordinate.
-    
-    """
-    smallest_distance = float('inf') #max value for float
-    for station in stations:
-        dist = distance_to_station(my_cords,[station['latitude'], station['longitude']])
-        if dist < smallest_distance:
-            smallest_distance = dist
-            smallest_distance_id = station['id']
-            station_coordinates = [station['latitude'], station["longitude"]]
-    #print(smallest_distance_id, station_coordinates)
-    return smallest_distance_id
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -85,15 +108,11 @@ def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
     api_call = r"api/version/"+version+"/parameter/"+str(parameter_id) \
         +"/station/"+str(station_id)+"/period/"+period+"/data.csv"
     url = base_url + api_call
-    #print(url)
     response = requests.get(url)
-    return(response.text)   
+    return(response.text)
+
 
 def fetch_smhi_parameters_csv(station_ids, parameters, period, version="latest"):
-    #print(parameters[])
-    #data = fetch_smhi_parameter_csv(station_ids[0], parameters["air_temperature_id"], period, version)
-    
-
     parameter_dicts = {}
     for station_id, parameter in zip(station_ids, parameters.keys()):
         parameter_data = fetch_smhi_parameter_csv(station_id, parameters[parameter], period, version)
@@ -133,16 +152,16 @@ def fetch_smhi_parameters_json(station_ids, parameters, period, version="latest"
 
     parameter_dicts = {}
     for station_id, parameter in zip(station_ids, parameters.keys()):
-        parameter_data = fetch_smhi_parameter_json(station_id, parameters[parameter], period, version)
-        #save_json(parameter_data, parameter)
-        #parameter_data = read_json(parameter)
-        #print(parameter_data["value"])
-        data_points = parameter_data["value"]
-        parameter_dict = {}
-        if data_points is not None:
-            for data_point in data_points:
-                parameter_dict[data_point["date"]] = data_point["value"]
-            parameter_dicts[parameter] = parameter_dict
+        try:
+            parameter_data = fetch_smhi_parameter_json(station_id, parameters[parameter], period, version)
+            data_points = parameter_data["value"]
+            parameter_dict = {}
+            if data_points is not None:
+                for data_point in data_points:
+                    parameter_dict[data_point["date"]] = data_point["value"]
+                    parameter_dicts[parameter] = parameter_dict
+        except:
+            print("CANT FETCH PARAMETER: " + parameter + " FROM STATION: " + str(station_id))
     return parameter_dicts
 
 def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
@@ -160,10 +179,8 @@ def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
         +"/station/"+str(station_id)+"/period/"+period+"/data.json"
     url = base_url + api_call
     response = requests.get(url)
-    #print(url)
     json_data = json.loads(response.text)
-    #json_formatted_str = json.dumps(json_data, indent=2)
-    #print(json_formatted_str)
+    
     return json_data
 
 
@@ -173,13 +190,11 @@ def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
 def get_strong_data(start_date, end_date, latitude, longitude):
     start_date = datetime.utcfromtimestamp(start_date/1000)
     end_date = datetime.utcfromtimestamp(end_date/1000)
-    #print("enddate: " + str(end_date))
     
     url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
      '&h1=' + str(start_date.hour) +'&m2='+ str(end_date.month) +'&d2='+ str(end_date.day) +'&y2='+ str(end_date.year) +'&h2=' + str(end_date.hour) + '&lat='+ str(latitude) +'&lon='+ str(longitude) +'&lev=0'
      
     data = requests.get(url)
-    #print(data.text)
     lines = data.text.splitlines()
   
     sunhours = {}
@@ -189,7 +204,6 @@ def get_strong_data(start_date, end_date, latitude, longitude):
         month = int(date[1])
         day = int(date[2])
         hour = int(date[3])
-        #print(datetime(year,month,day,hour))
         d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
         sunhours[int(d) * 1000] = date[4]
 
@@ -203,24 +217,18 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     Keyword arguments:
     parameter_dicts -- dictionary containing dictionaries of parameters
     """
-
-    
-    
     # Get all unixtimestamps (dates)
     dates = []
     remove_dates = []
     for parameter in parameter_dicts:
         parameter_dict = parameter_dicts[parameter]
-        #print(parameter)
         for date in parameter_dict.keys():
-            #print(date)
             if date not in dates:
                 dates.append(date)
 
     
     for date in dates:
         date_t = datetime.utcfromtimestamp(date/1000)
-        #print(date_t)
         if date_t.day == datetime.utcnow().day and date_t.month == datetime.utcnow().month and date_t.year == datetime.utcnow().year:
             remove_dates.append(date)
     
@@ -231,7 +239,6 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     #strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
     #parameter_dicts["sun_hours_id"] = strong_data
     
-    #print(strong_data)
     # write to csv
     file_handle = open(filename, 'w', newline='')
     print("Writing to csv...")
@@ -249,7 +256,6 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
                 try:
                     value = parameter_dict[date]
                 except KeyError:
-                    #print(date)
                     value = None
                     
                 row.append(value)
@@ -291,7 +297,7 @@ def get_smhi_data_from_stations(station_ids, parameters, period):
     return data
 
 def get_smhi_data_from_coordinates(latitude, longitude, period, parameters=PARAMETERS):
-    station_ids = return_nearest_station([latitude, longitude], parameters.values())
+    station_ids = return_nearest_station([latitude, longitude], parameters.values(), period)
     data = get_smhi_data_from_stations(station_ids, parameters, period)
     return data
 

@@ -10,6 +10,7 @@ def create_building_files():
     for every building with available zip-code/(lat,long)-coords.
 
     """
+    building_count = 0
     with open('hpsolartech_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
@@ -38,10 +39,12 @@ def create_building_files():
 
                 latitude = float(latitude)
                 longitude = float(longitude)
-                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "latest-months")
+                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "latest-day")
                 path = "data/" + building_id + ".csv"
                 smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
-                print("Building done: " + building_id)
+                building_count += 1
+                print("Building done: " + building_id + ", Total buildings done: " \
+                      + str(building_count))
 
 
 def read_hpsolartech_data():
