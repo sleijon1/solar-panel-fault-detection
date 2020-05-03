@@ -49,13 +49,17 @@ def create_building_files():
 
                 latitude = float(latitude)
                 longitude = float(longitude)
-                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "latest-day")
+                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "corrected-archive")
                 path = "data/" + building_id + ".csv"
-                smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
-                building_count += 1
-                print("Building done: " + building_id + ", Total buildings done: " \
+                status_code = smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
+                if status_code == 1:
+                    building_count += 1
+                    print("Building done: " + building_id + ", Total buildings done: " \
                       + str(building_count))
-
+                    #temp exit to only create one file while doing corrected archive
+                    exit()
+                elif status_code == 0:
+                    print("'save_smhi_parameters_to_csv' was given an empty parameter_dict")
 
 def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 
