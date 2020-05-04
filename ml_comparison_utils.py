@@ -1,5 +1,5 @@
 from __future__ import print_function
-
+import numpy as np
 import pandas as pd
 from sklearn import model_selection
 from sklearn.decomposition import PCA
@@ -9,7 +9,10 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import Normalizer
 from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler, RobustScaler, QuantileTransformer, \
     PowerTransformer
-from sklearn.linear_model import LinearRegression
+from sklearn.neural_network import MLPRegressor
+from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.preprocessing import PolynomialFeatures 
+from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 import os
 
@@ -67,10 +70,14 @@ def create_pipelines(verbose=1):
      
     models = [
               ('LR', LinearRegression()),
-              ('DTR', DecisionTreeRegressor(max_depth=20))
-              #('SVR',SVR(C=1.0, epsilon=0.2))
+              ('PR', LinearRegression()),
+              ('DTR', DecisionTreeRegressor(max_depth = 6, random_state = 42)),
+              ('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='tanh', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
+              ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
+              ('LASSO',Lasso(alpha=0.1))
               ]
-    scalers = [('StandardScaler', StandardScaler()),
+    scalers = [
+                ('StandardScaler', StandardScaler()),
                ('MinMaxScaler', MinMaxScaler()),
                ('MaxAbsScaler', MaxAbsScaler()),
                ('RobustScaler', RobustScaler()),
@@ -80,7 +87,7 @@ def create_pipelines(verbose=1):
                ('Normalizer', Normalizer())
                ]
                
-    additions = [('PCA', PCA(n_components=4)),
+    additions = [
                  ]
     # Create pipelines
     pipelines = []
@@ -152,14 +159,25 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
         print(name)
 
         # fit on train and predict on test
-
-        model.fit(X_train, y_train)
-       
-        y_pred = model.predict(X_test) 
-        curr_test_score = metrics.r2_score(y_test, y_pred)
-            
-        column = y_pred.tolist()
-      
+        column = []
+        if name.find("PR") != -1:
+            poly = PolynomialFeatures(degree = 4) 
+            X_poly = poly.fit_transform(X_train) 
+  
+            model.fit(X_poly, y_train) 
+            y_pred = model.predict(poly.fit_transform(X_test))
+            y_pred = np.absolute(y_pred)
+            curr_test_score = metrics.mean_squared_error(y_test, y_pred)
+            column = y_pred.tolist()
+        else:
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+            y_pred = y_pred.clip(min=0)
+            curr_test_score = metrics.mean_squared_error(y_test, y_pred)
+            column = y_pred.tolist()
+                
+        
+    
         test_scores.append(curr_test_score)
 
         # Add separation line if different classifier applied
@@ -179,8 +197,8 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
         df[name] = column
 
     print_results(names, results, test_scores)
-    path = os.path.join("data", "results_sun.csv") 
-    df.to_csv(path)       
+    path = os.path.join("data", "results_sun.csv")
+    df.to_csv(path)
 
     df = pd.DataFrame(rows_list)
     return df[["Dataset", "Classifier_Name", "CV_mean", "CV_std", "Test_score"]]

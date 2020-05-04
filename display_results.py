@@ -9,7 +9,7 @@ import numpy as np
 import operator
 import os
 import pandas as pd
-file_name = "sun_results.csv"
+file_name = "sun_score.csv"
 results_file = os.path.join("data",file_name)
 results_df = pd.read_csv(results_file).dropna().round(3)
 

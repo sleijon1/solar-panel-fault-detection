@@ -23,7 +23,7 @@ if __name__ == '__main__':
     X, y = parser.X, parser.y
 
     y_sun = column_or_1d(y, warn=False)
-    X_train, X_test, y_train, y_test = train_test_split(X, y_sun, test_size=0.20, shuffle=False)
+    X_train, X_test, y_train, y_test = train_test_split(X, y_sun, test_size=0.20, shuffle=False, random_state = 42)
 
     # Create pipelines
     pipelines = create_pipelines()
@@ -39,4 +39,4 @@ if __name__ == '__main__':
         results_df.to_csv(score_path, index=False)
     
     results_path = os.path.join("data", "results_sun.csv")    
-    plot_date_and_parameter(parameter=["real_output", "DTR", "QuantileTransformer-Normal_DTR", "LR"], path=results_path)
+    plot_date_and_parameter(parameter=["real_output"], path=results_path)
