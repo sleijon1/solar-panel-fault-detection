@@ -10,4 +10,4 @@ import os
 from visualize_data import plot_date_and_parameter
 
 results_path = os.path.join("data", "results_sun.csv")    
-plot_date_and_parameter(parameter=["real_output", "MaxAbsScaler_MLP"], path=results_path)
+plot_date_and_parameter(parameter=["real_output", "MinMaxScaler_MLP"], path=results_path)

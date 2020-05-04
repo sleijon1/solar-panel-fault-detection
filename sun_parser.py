@@ -47,9 +47,8 @@ class SunParser(object):
         data_cleaned = data_cleaned.dropna()
         #data_cleaned = data_cleaned.drop(["air_temperature_id"], axis=1)
         for row in data_cleaned["date"]:
-            if ((datetime.utcfromtimestamp(row/1000)).year < 2018) or ((datetime.utcfromtimestamp(row/1000)).month > 11) or ((datetime.utcfromtimestamp(row/1000)).month < 3):  
+            if ((datetime.utcfromtimestamp(row/1000)).year < 2018):  
                 indexNames = (data_cleaned[data_cleaned['date'] == row ].index)
-                #print("removed: " + str(datetime.utcfromtimestamp(row/1000)))
                 data_cleaned.drop(indexNames , inplace=True)
 
 

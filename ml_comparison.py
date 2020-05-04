@@ -23,7 +23,7 @@ if __name__ == '__main__':
     X, y = parser.X, parser.y
 
     y_sun = column_or_1d(y, warn=False)
-    X_train, X_test, y_train, y_test = train_test_split(X, y_sun, test_size=0.20, shuffle=False, random_state = 42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y_sun, test_size=0.30, shuffle=False, random_state = 42)
 
     # Create pipelines
     pipelines = create_pipelines()
@@ -38,5 +38,4 @@ if __name__ == '__main__':
         score_path = os.path.join("data",score_name)
         results_df.to_csv(score_path, index=False)
     
-    results_path = os.path.join("data", "results_sun.csv")    
-    plot_date_and_parameter(parameter=["real_output"], path=results_path)
+

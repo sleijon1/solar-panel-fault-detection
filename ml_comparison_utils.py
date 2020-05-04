@@ -16,7 +16,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 import os
 
-def print_results(names, results, test_scores):
+def print_results(names, results, RMSE, R2_score):
     print()
     print("#" * 30 + "Results" + "#" * 30)
     counter = 0
@@ -47,13 +47,13 @@ def print_results(names, results, test_scores):
     # print max row in BOLD
     counter = 0
     prev_clf_name = names[0].split("_")[1]
-    for name, result, score in zip(names, results, test_scores):
+    for name, result, RMSE, R2_score in zip(names, results, RMSE, R2_score):
         counter += 1
         clf_name = name.split("_")[1]
         if prev_clf_name != clf_name:
             print()
             prev_clf_name = clf_name
-        msg = "%s: %f (%f) [test_score:%.3f]" % (name, result.mean(), result.std(), score)
+        msg = "%s: %f (%f) [RMSE:%.3f] [R2_score:%.3f]" % (name, result.mean(), result.std(), RMSE, R2_score)
         if counter == max_mean_counter[clf_name]:
             print(Color.BOLD + msg)
         else:
@@ -69,12 +69,12 @@ def create_pipelines(verbose=1):
     
      
     models = [
-              ('LR', LinearRegression()),
-              ('PR', LinearRegression()),
-              ('DTR', DecisionTreeRegressor(max_depth = 6, random_state = 42)),
-              ('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='tanh', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
+              #('LR', LinearRegression()),
+              #('PR', LinearRegression()),
+              ('DTR', DecisionTreeRegressor(max_depth = 10, random_state = 42)),
+              ('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='logistic', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
               ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
-              ('LASSO',Lasso(alpha=0.1))
+              #('LASSO',Lasso(alpha=0.1))
               ]
     scalers = [
                 ('StandardScaler', StandardScaler()),
@@ -136,9 +136,11 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
     # Lists for the pipeline results
     results = []
     names = []
-    test_scores = []
+    RMSE = []
+    R2_scores = []
     df = pd.DataFrame()
-    curr_test_score = 0
+    curr_R2_score = 0
+    curr_RMSE = 0
     prev_clf_name = pipelines[0][0].split("_")[1]
 
     df["date"] = X_test["date"]
@@ -166,20 +168,20 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
   
             model.fit(X_poly, y_train) 
             y_pred = model.predict(poly.fit_transform(X_test))
-            y_pred = np.absolute(y_pred)
-            curr_test_score = metrics.mean_squared_error(y_test, y_pred)
+            y_pred = y_pred.clip(min=0)
+            curr_RMSE = metrics.mean_squared_error(y_test, y_pred)
+            curr_R2_score = metrics.r2_score(y_test, y_pred)
             column = y_pred.tolist()
         else:
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
             y_pred = y_pred.clip(min=0)
-            curr_test_score = metrics.mean_squared_error(y_test, y_pred)
+            curr_RMSE = metrics.mean_squared_error(y_test, y_pred)
+            curr_R2_score = metrics.r2_score(y_test, y_pred)
             column = y_pred.tolist()
-                
-        
-    
-        test_scores.append(curr_test_score)
 
+        RMSE.append(curr_RMSE)
+        R2_scores.append(curr_R2_score)
         # Add separation line if different classifier applied
         rows_list, prev_clf_name = check_seperation_line(name, prev_clf_name, rows_list)
 
@@ -188,20 +190,21 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
                         "Classifier_Name": name,
                         "CV_mean": cv_results.mean(),
                         "CV_std": cv_results.std(),
-                        "Test_score": curr_test_score
+                        "RMSE": curr_RMSE,
+                        "R2_score": curr_R2_score
                         }
         rows_list.append(results_dict)
         if name[0] == '_':
             name = name[1:]
         
         df[name] = column
-
-    print_results(names, results, test_scores)
+    
+    print_results(names, results, RMSE, R2_scores)
     path = os.path.join("data", "results_sun.csv")
     df.to_csv(path)
 
     df = pd.DataFrame(rows_list)
-    return df[["Dataset", "Classifier_Name", "CV_mean", "CV_std", "Test_score"]]
+    return df[["Dataset", "Classifier_Name", "CV_mean", "CV_std", "RMSE", "R2_score"]]
 
 
 
