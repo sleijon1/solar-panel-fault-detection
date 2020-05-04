@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 import requests
 from sklearn.metrics.pairwise import haversine_distances
 from math import radians
@@ -43,7 +43,6 @@ def return_nearest_station(pv_cords, parameter_ids, period):
     for parameter_id in parameter_ids:
         try:
             stations = PARAM_TO_STATIONS[parameter_id]
-            print("Stations for parameter already gathered.")
         except KeyError:
             url = "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/" + \
             str(parameter_id) + ".json"
@@ -121,15 +120,15 @@ def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
     return(response.text)
 
 
-def fetch_smhi_parameters_csv(station_ids, parameters, period, version="latest"):
+def fetch_smhi_parameters_csv(station_ids, parameters, period, first_date, version="latest"):
     parameter_dicts = {}
     for station_id, parameter in zip(station_ids, parameters.keys()):
         try:
             parameter_data = fetch_smhi_parameter_csv(station_id, parameters[parameter], period, version)
-            cutoff = parameter_data.find('2012')
+            cutoff = parameter_data.find(first_date)
             if cutoff == -1:
-                print("corrected_archive having old data for this building: skipping.")
-                break
+                print("\tcorrected_archive having old data for parameter '" + parameter + "', skipping.")
+                continue
             parameter_data = parameter_data[cutoff:]
             parameter_dict = {}
             
@@ -232,6 +231,7 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     Keyword arguments:
     parameter_dicts -- dictionary containing dictionaries of parameters
     """
+    print("Calculating timestamps...")
     if parameter_dicts is None:
         print("No parameter data given to 'save_smhi_parameters_to_csv', corrected-archive might be returning old data.")
         return 0
@@ -251,9 +251,20 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     
     for date in remove_dates:
         dates.remove(date)
-   
-    print("Running strong...")
-    print(dates)
+
+    start_date = str(min(dates))
+    end_date = str(max(dates))
+    print("\tmin:" + start_date + ", max:" + end_date)
+    print("Fetching strong data...")
+
+    start_date_readable = datetime.utcfromtimestamp(int(start_date)/1000)
+    end_date_readable = datetime.utcfromtimestamp(int(end_date)/1000)
+    print("\tStart: " + str(start_date_readable))
+    print("\tEnd: " + str(end_date_readable))
+    diff = end_date_readable - start_date_readable
+    eta_minutes = float(diff.days) * 12/365 * 3
+    print("\tAssuming 1 month of data takes 3 minutes to retrive:")
+    print("\tETA: " + str(int(eta_minutes)) + " min")
     strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
     parameter_dicts["sun_hours_id"] = strong_data
     
@@ -302,21 +313,22 @@ def read_json(filename, extension=".txt"):
         json_data = json.load(readfile)
     return json_data
 
-def get_smhi_data_from_stations(station_ids, parameters, period):
+def get_smhi_data_from_stations(station_ids, parameters, period, first_date):
     """Fetches SMHI data and stores it using csv-format
 
     Keyword arguments:
     station_id -- id of station to retrieve from
     """
     if period == "corrected-archive":
-        data = fetch_smhi_parameters_csv(station_ids, parameters, period)
+        data = fetch_smhi_parameters_csv(station_ids, parameters, period, first_date)
     else:
         data = fetch_smhi_parameters_json(station_ids, parameters, period)
     return data
 
-def get_smhi_data_from_coordinates(latitude, longitude, period, parameters=PARAMETERS):
+def get_smhi_data_from_coordinates(latitude, longitude, period, first_date, parameters=PARAMETERS):
+    print("Fetching smhi data...")
     station_ids = return_nearest_station([latitude, longitude], parameters.values(), period)
-    data = get_smhi_data_from_stations(station_ids, parameters, period)
+    data = get_smhi_data_from_stations(station_ids, parameters, period, first_date)
     return data
 
 if __name__ == "__main__":

@@ -5,6 +5,9 @@ import pgeocode
 import numpy as np
 
 def find_building_ids():
+    """ Returns all building ids from hpsolartech_data.csv
+    
+    """
     ids = []
     with open('hpsolartech_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
@@ -14,22 +17,40 @@ def find_building_ids():
     return ids
 
 
-def create_building_files():
+def find_first_year(wanted_id):
+    """ Returns the first year for which data exists for a given building id
+
+    """
+    oldest_date = 3000
+    with open('hpsolartech_data.csv', 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=';')
+        for row in reader:
+            building_id = row[0]
+            if building_id == wanted_id:
+                date = row[2]
+                formatted_date = int(date[:4])
+                if formatted_date < oldest_date:
+                    oldest_date = formatted_date
+    return str(oldest_date)
+
+def print_good_building_ids():
     """ Reads hpsolartech_metadata.csv and creates .csv files containing smhi data
     for every building with available zip-code/(lat,long)-coords.
 
     """
+    initials = ["JK", "SL", "PS", "HW"]
     avail_ids = find_building_ids()
     building_count = 0
     with open('hpsolartech_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
         for row in reader:
-            if len(row['Id']) == 18 and row['Id'] in avail_ids:
+            if len(row['Id']) == 18 and row['Id'] in avail_ids: 
                 building_id = row['Id']
                 latitude = row['Latitude']
                 longitude = row['Longitude']
                 zip_code =  row['ZipCode']
+
                 if zip_code == "0" and latitude == "null" and longitude == "null":
                     print("No geographical data, skipping " + building_id)
                     skipped_buildings += 1
@@ -47,20 +68,62 @@ def create_building_files():
                         skipped_buildings += 1
                         continue
 
+                building_count += 1
+                print(str(building_count) + ": (" + initials[building_count%4] + ")" + " building_id: " + str(building_id))
+
+def create_building_files(wanted_id):
+    """ Reads hpsolartech_metadata.csv and creates .csv files containing smhi data
+    for every building with available zip-code/(lat,long)-coords.
+
+    """
+    avail_ids = find_building_ids()
+    building_count = 0
+    with open('hpsolartech_metadata.csv', 'r') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=';')
+        skipped_buildings = 0
+        for row in reader:
+            if len(row['Id']) == 18 and row['Id'] in avail_ids: 
+                building_id = row['Id']
+                latitude = row['Latitude']
+                longitude = row['Longitude']
+                zip_code =  row['ZipCode']
+
+
+                if building_id != wanted_id:
+                   continue
+
+                if zip_code == "0" and latitude == "null" and longitude == "null":
+                    print("No geographical data, skipping " + building_id)
+                    skipped_buildings += 1
+                    continue
+                
+                if latitude == "null" or longitude == "null":
+                    # get lat, long from zip code
+                    zip_code = zip_code[:3] + ' ' + zip_code[3:]
+                    nomi = pgeocode.Nominatim('se')
+                    df = nomi.query_postal_code(zip_code)
+                    latitude = df['latitude']
+                    longitude = df['longitude']
+                    if np.isnan(latitude) or np.isnan(longitude):
+                        print("Couldn't retrieve lat,long from zip code for building " + building_id)
+                        skipped_buildings += 1
+                        continue
+
+                print("Building_id: " + str(building_id))
                 latitude = float(latitude)
                 longitude = float(longitude)
-                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "corrected-archive")
+                data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "corrected-archive", find_first_year(building_id))
                 path = "data/" + building_id + ".csv"
                 status_code = smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
                 if status_code == 1:
                     building_count += 1
                     print("Building done: " + building_id + ", Total buildings done: " \
                       + str(building_count))
-                    #temp exit to only create one file while doing corrected archive
-                    exit()
                 elif status_code == 0:
                     print("'save_smhi_parameters_to_csv' was given an empty parameter_dict")
-
+                #temp exit to only create one file while doing corrected archive
+                exit()
+        print("Couldn't find building_id: " + wanted_id)
 def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 
     hpsolartech_data.csv as a dictionary
@@ -188,8 +251,11 @@ def fill_hpsolartech_files(verbose=False):
     print(length*"#")
 
 if __name__ == "__main__":
+    print_good_building_ids()
+    
+    input_id = str(input("Type in building id, if unsure use function: print_good_building_ids()\nbuilding_id: "))
     try:
-        create_building_files()
+        create_building_files(input_id)
     except:
         print("SMHI_FETCH CRASHING")
     fill_hpsolartech_files(verbose=False)
