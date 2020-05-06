@@ -10,7 +10,8 @@ from datetime import datetime,timezone
 import pandas as pd 
 from contextlib import closing
 import codecs
-
+import shutil
+from pathlib import Path
 # Default parameters to use
 PARAMETERS = {
         #sun_hours_weak_id":10,
@@ -200,29 +201,64 @@ def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
 
 
 
+def get_strong_data_old(start_date, end_date, latitude, longitude):
+    try:
+        start_date = datetime.utcfromtimestamp(start_date/1000)
+        end_date = datetime.utcfromtimestamp(end_date/1000)
+        
+        url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
+         '&h1=' + str(start_date.hour) +'&m2='+ str(end_date.month) +'&d2='+ str(end_date.day) +'&y2='+ str(end_date.year) +'&h2=' + str(end_date.hour) + '&lat='+ str(latitude) +'&lon='+ str(longitude) +'&lev=0'
+        r = requests.get(url)
+        headers = r.headers
+        print(headers)
+
+
+        sunhours = {}
+        lines = r.text.splitlines()
+        for line in lines:
+            date = line.split()
+            year = int(date[0])
+            month = int(date[1])
+            day = int(date[2])
+            hour = int(date[3])
+            d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
+            print()
+            sunhours[int(d) * 1000] = date[4]
+    except Exception as e:
+        print("Error with message: " + e)
+
+    return sunhours
 
 
 def get_strong_data(start_date, end_date, latitude, longitude):
-    start_date = datetime.utcfromtimestamp(start_date/1000)
-    end_date = datetime.utcfromtimestamp(end_date/1000)
-    
-    url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
-     '&h1=' + str(start_date.hour) +'&m2='+ str(end_date.month) +'&d2='+ str(end_date.day) +'&y2='+ str(end_date.year) +'&h2=' + str(end_date.hour) + '&lat='+ str(latitude) +'&lon='+ str(longitude) +'&lev=0'
-    data = requests.get(url)
-    lines = data.text.splitlines()
-  
-    sunhours = {}
-    for line in lines:
-        date = line.split()
-        year = int(date[0])
-        month = int(date[1])
-        day = int(date[2])
-        hour = int(date[3])
-        d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
-        sunhours[int(d) * 1000] = date[4]
-
+    try:
+        start_date = datetime.utcfromtimestamp(start_date/1000)
+        end_date = datetime.utcfromtimestamp(end_date/1000)
         
+        url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
+         '&h1=' + str(start_date.hour) +'&m2='+ str(end_date.month) +'&d2='+ str(end_date.day) +'&y2='+ str(end_date.year) +'&h2=' + str(end_date.hour) + '&lat='+ str(latitude) +'&lon='+ str(longitude) +'&lev=0'
+
+        base_url = r"https://opendata-download-metanalys.smhi.se/"
+        api_call = r"api/category/strang1g/version/1/geotype/point/lon/" + str(longitude) + "/lat/" + str(latitude) + "/parameter/116/data.json?from=" + str(start_date.date()) + "&to=" + str(end_date.date())
+        url = base_url + api_call
+        r = requests.get(url)
+        data_json = json.loads(r.text)
+        sunhours = {}
+        for data_point in data_json:
+            date = data_point["date_time"]
+            value = data_point["value"]
+            year = int(date[:4])            
+            month = int(date[5:7])
+            day =  int(date[8:10])
+            hour = int(date[11:13])
+
+            d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
+            sunhours[int(d) * 1000] = float(value)
+    except Exception as e:
+        print("Error with message: " + e)
+
     return sunhours
+
 
 def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="smhi.csv"):
     """Saves parameters to smhi.csv
@@ -243,14 +279,6 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
         for date in parameter_dict.keys():
             if date not in dates:
                 dates.append(date)
-    
-    for date in dates:
-        date_t = datetime.utcfromtimestamp(date/1000)
-        if date_t.day == datetime.utcnow().day and date_t.month == datetime.utcnow().month and date_t.year == datetime.utcnow().year:
-            remove_dates.append(date)
-    
-    for date in remove_dates:
-        dates.remove(date)
 
     start_date = str(min(dates))
     end_date = str(max(dates))
@@ -261,15 +289,15 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     end_date_readable = datetime.utcfromtimestamp(int(end_date)/1000)
     print("\tStart: " + str(start_date_readable))
     print("\tEnd: " + str(end_date_readable))
-    diff = end_date_readable - start_date_readable
-    eta_minutes = float(diff.days) * 12/365 * 3
-    print("\tAssuming 1 month of data takes 3 minutes to retrive:")
-    print("\tETA: " + str(int(eta_minutes)) + " min")
+
     strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
     parameter_dicts["sun_hours_id"] = strong_data
     
     # write to csv
-    file_handle = open(filename, 'w', newline='')
+    try:
+        file_handle = open(filename, 'w', newline='')
+    except FileNotFoundError:
+        print("FileNotFoundError, probably because no 'data' folder exists.")
     print("Writing to csv...")
     with file_handle:
         writer = csv.writer(file_handle)
@@ -286,7 +314,6 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
                     value = parameter_dict[date]
                 except KeyError:
                     value = None
-                    
                 row.append(value)
             writer.writerow(row)
     return 1

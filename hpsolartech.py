@@ -71,7 +71,7 @@ def print_good_building_ids():
                 building_count += 1
                 print(str(building_count) + ": (" + initials[building_count%4] + ")" + " building_id: " + str(building_id))
 
-def create_building_files(wanted_id):
+def create_building_files():
     """ Reads hpsolartech_metadata.csv and creates .csv files containing smhi data
     for every building with available zip-code/(lat,long)-coords.
 
@@ -87,10 +87,6 @@ def create_building_files(wanted_id):
                 latitude = row['Latitude']
                 longitude = row['Longitude']
                 zip_code =  row['ZipCode']
-
-
-                if building_id != wanted_id:
-                   continue
 
                 if zip_code == "0" and latitude == "null" and longitude == "null":
                     print("No geographical data, skipping " + building_id)
@@ -119,10 +115,9 @@ def create_building_files(wanted_id):
                     building_count += 1
                     print("Building done: " + building_id + ", Total buildings done: " \
                       + str(building_count))
+                    print("------------------------------------------------------------")
                 elif status_code == 0:
                     print("'save_smhi_parameters_to_csv' was given an empty parameter_dict")
-                #temp exit to only create one file while doing corrected archive
-                exit()
         print("Couldn't find building_id: " + wanted_id)
 def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 
@@ -197,9 +192,7 @@ def write_hpsolartech_data(building_id, building_data, verbose):
                 except KeyError:
                     output.append(None)
                     if verbose:
-                        print("KeyError: " + str(date) + " for id: " + building_id + ".")           
-
-        
+                        print("KeyError: " + str(date) + " for id: " + building_id + ".")
         with open(new_path, "w", newline='') as write_obj:
             data_dict['output'] = output
             fieldnames.append("output")
@@ -233,7 +226,6 @@ def fill_hpsolartech_files(verbose=False):
     hpsolartech_data = read_hpsolartech_data()
     csvs_written = 0
     csvs_not_found = 0
-    print(len(hpsolartech_data.keys()))
     for building_id in hpsolartech_data.keys():
         wrote = write_hpsolartech_data(building_id, hpsolartech_data[building_id], verbose)
         if wrote:
@@ -244,6 +236,7 @@ def fill_hpsolartech_files(verbose=False):
     longest_line = "# Csv files written to: " + str(csvs_written) + " #"
     length = len(longest_line)
 
+    print("")
     print(length*"#")
     print("# Building_ids found: " + str(csvs_written+csvs_not_found) + (length-(len(str(csvs_written+csvs_not_found))+23))*" " +  "#")
     print("# Csv files written to: " + str(csvs_written) + " #")
@@ -251,11 +244,11 @@ def fill_hpsolartech_files(verbose=False):
     print(length*"#")
 
 if __name__ == "__main__":
-    print_good_building_ids()
+    #print_good_building_ids()
     
-    input_id = str(input("Type in building id, if unsure use function: print_good_building_ids()\nbuilding_id: "))
+    #input_id = str(input("Type in building id, if unsure use function: print_good_building_ids()\nbuilding_id: "))
     try:
-        create_building_files(input_id)
-    except:
-        print("SMHI_FETCH CRASHING")
+        create_building_files()
+    except Exception as e:
+        print("create_building_files crashed. " + str(type(e).__name__) + ": " + str(e))
     fill_hpsolartech_files(verbose=False)
