@@ -122,6 +122,17 @@ def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
 
 
 def fetch_smhi_parameters_csv(station_ids, parameters, period, first_date, version="latest"):
+    """Makes API call to retrieve one parameter.
+
+
+    Keyword arguments:
+    station_ids -- list of station ids
+    parameters -- dictionary containing {paramater_name: parameter_id} pairs
+    period -- time frame of retrieval
+    first_date -- the first date of historical data
+    version -- version of SMHI API
+    """
+
     parameter_dicts = {}
     for station_id, parameter in zip(station_ids, parameters.keys()):
         try:
@@ -200,37 +211,16 @@ def fetch_smhi_parameter_json(station_id, parameter_id, period, version):
     return json_data
 
 
-
-def get_strong_data_old(start_date, end_date, latitude, longitude):
-    try:
-        start_date = datetime.utcfromtimestamp(start_date/1000)
-        end_date = datetime.utcfromtimestamp(end_date/1000)
-        
-        url = 'http://strang.smhi.se/extraction/getseries.php?par=116&m1='+ str(start_date.month) +'&d1='+ str(start_date.day) +'&y1='+ str(start_date.year) + \
-         '&h1=' + str(start_date.hour) +'&m2='+ str(end_date.month) +'&d2='+ str(end_date.day) +'&y2='+ str(end_date.year) +'&h2=' + str(end_date.hour) + '&lat='+ str(latitude) +'&lon='+ str(longitude) +'&lev=0'
-        r = requests.get(url)
-        headers = r.headers
-        print(headers)
-
-
-        sunhours = {}
-        lines = r.text.splitlines()
-        for line in lines:
-            date = line.split()
-            year = int(date[0])
-            month = int(date[1])
-            day = int(date[2])
-            hour = int(date[3])
-            d = datetime(year,month,day,hour).replace(tzinfo=timezone.utc).timestamp()
-            print()
-            sunhours[int(d) * 1000] = date[4]
-    except Exception as e:
-        print("Error with message: " + e)
-
-    return sunhours
-
-
 def get_strong_data(start_date, end_date, latitude, longitude):
+    """ API Call to get STRÅNG data between start_date and end_date for a specific coordinate pair (latitutde, longitude)
+
+
+    Keyword arguments:
+    start_date -- start date
+    end_date -- end date
+    latitude -- latitude
+    longitude -- longitude
+    """
     try:
         start_date = datetime.utcfromtimestamp(start_date/1000)
         end_date = datetime.utcfromtimestamp(end_date/1000)
@@ -297,7 +287,7 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     try:
         file_handle = open(filename, 'w', newline='')
     except FileNotFoundError:
-        print("FileNotFoundError, probably because no 'data' folder exists.")
+        print("FileNotFoundError, probably because no folder exists at 'data/buildings'.")
     print("Writing to csv...")
     with file_handle:
         writer = csv.writer(file_handle)

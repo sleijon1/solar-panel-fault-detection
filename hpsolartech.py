@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import smhi_fetch
 import pgeocode
 import numpy as np
+import os
 
 def find_building_ids():
     """ Returns all building ids from hpsolartech_data.csv
@@ -20,6 +21,8 @@ def find_building_ids():
 def find_first_year(wanted_id):
     """ Returns the first year for which data exists for a given building id
 
+	Keyword arguments
+	wanted_id -- id of the wanted building
     """
     oldest_date = 3000
     with open('hpsolartech_data.csv', 'r') as csvfile:
@@ -109,7 +112,7 @@ def create_building_files():
                 latitude = float(latitude)
                 longitude = float(longitude)
                 data = smhi_fetch.get_smhi_data_from_coordinates(latitude, longitude, "corrected-archive", find_first_year(building_id))
-                path = "data/" + building_id + ".csv"
+                path = "data/buildings/" + building_id + ".csv"
                 status_code = smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
                 if status_code == 1:
                     building_count += 1
@@ -118,6 +121,8 @@ def create_building_files():
                     print("------------------------------------------------------------")
                 elif status_code == 0:
                     print("'save_smhi_parameters_to_csv' was given an empty parameter_dict")
+                if building_count ==3:
+                    return
         print("Couldn't find building_id: " + wanted_id)
 def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 
@@ -167,8 +172,8 @@ def write_hpsolartech_data(building_id, building_data, verbose):
     verbose -- bool for more information
 
     """
-    path = "data/" + building_id + ".csv"
-    new_path = "data/" + building_id + "_new.csv"
+    path = "data/buildings/" + building_id + ".csv"
+    new_path = "data/buildings/" + building_id + "_new.csv"
 
     try:
         with open(path, "r") as read_obj:
@@ -211,6 +216,8 @@ def write_hpsolartech_data(building_id, building_data, verbose):
 
         if verbose:
             print("File " + path + " done.")
+        os.remove(path)
+        os.rename(new_path, path)
         return True
     except FileNotFoundError:
         if verbose:
@@ -232,6 +239,7 @@ def fill_hpsolartech_files(verbose=False):
             csvs_written += 1
         else:
             csvs_not_found += 1
+
 
     longest_line = "# Csv files written to: " + str(csvs_written) + " #"
     length = len(longest_line)
