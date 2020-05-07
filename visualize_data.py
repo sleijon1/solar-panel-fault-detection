@@ -21,7 +21,7 @@ def plot_date_and_parameter(lower_limit=None, upper_limit=None, parameter='real_
     df.drop(indexes, inplace=True)
     df['date'] = df['date'].map(lambda x: x/1000)
     df['date'] = df['date'].map(datetime.utcfromtimestamp)
-    parameter = ["real_output"]+ list(df.columns)[2:]
+    #parameter = ["real_output"]+ list(df.columns)[2:]
     df.plot(x='date',y=parameter)
     plt.show()
 

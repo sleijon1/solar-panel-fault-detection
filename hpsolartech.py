@@ -10,7 +10,7 @@ def find_building_ids():
     
     """
     ids = []
-    with open('hpsolartech_data.csv', 'r') as csvfile:
+    with open('data/hpsolartech_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
         for row in reader:
             if row[0] not in ids:
@@ -25,7 +25,7 @@ def find_first_year(wanted_id):
 	wanted_id -- id of the wanted building
     """
     oldest_date = 3000
-    with open('hpsolartech_data.csv', 'r') as csvfile:
+    with open('data/hpsolartech_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
         for row in reader:
             building_id = row[0]
@@ -44,7 +44,7 @@ def print_good_building_ids():
     initials = ["JK", "SL", "PS", "HW"]
     avail_ids = find_building_ids()
     building_count = 0
-    with open('hpsolartech_metadata.csv', 'r') as csvfile:
+    with open('data/hpsolartech_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
         for row in reader:
@@ -81,7 +81,7 @@ def create_building_files():
     """
     avail_ids = find_building_ids()
     building_count = 0
-    with open('hpsolartech_metadata.csv', 'r') as csvfile:
+    with open('data/hpsolartech_metadata.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         skipped_buildings = 0
         for row in reader:
@@ -129,7 +129,7 @@ def read_hpsolartech_data():
     hpsolartech_data.csv as a dictionary
 
     """
-    with open('hpsolartech_data.csv', 'r') as csvfile:
+    with open('data/hpsolartech_data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
 
         hpsolartech_dict = {}
