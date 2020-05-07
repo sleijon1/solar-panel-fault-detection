@@ -15,16 +15,16 @@ def display_results():
     """
     mean_df = pd.DataFrame()
     id_number = 0
-    for filename in os.listdir(os.path.join("data", "Buildings_score")):
+    for filename in os.listdir(os.path.join("data", "buildings_score")):
         if filename.endswith(".csv"):
             id_number = filename[:18]
                 
-            results_file = os.path.join("data","Buildings_score", str(id_number) + "_score.csv")
+            results_file = os.path.join("data","buildings_score", str(id_number) + "_score.csv")
             results_df = pd.read_csv(results_file).dropna().round(3)
             mean_df[str(id_number)+ "_mean"] = results_df["CV_R2_mean"] 
                 
     mean_df["mean"] = mean_df.mean(axis=1)
-    results_file = os.path.join("data", "Buildings_score",str(id_number) + "_score.csv")
+    results_file = os.path.join("data", "buildings_score",str(id_number) + "_score.csv")
     results_df = pd.read_csv(results_file).dropna().round(3)
     temp = results_df.copy()
     temp["CV_R2_mean"] = mean_df["mean"]

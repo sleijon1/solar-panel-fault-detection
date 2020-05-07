@@ -22,10 +22,10 @@ if __name__ == '__main__':
             -Write these R2 scores to a csv file
         """
     #For all data files in the folder
-    for filename in os.listdir(os.path.join("data", "Buildings")):
+    for filename in os.listdir(os.path.join("data", "buildings")):
         if filename.endswith(".csv"):
             id_number = filename[:18]
-            path = os.path.join("data","Buildings",(str(id_number)) + ".csv")
+            path = os.path.join("data","buildings",(str(id_number)) + ".csv")
             # Read datasets
             parser = SunParser(path)
             scoring = parser.metric
@@ -46,7 +46,7 @@ if __name__ == '__main__':
             # Save cv experiment to csv
             if is_save_results:
                 score_name = str(id_number) + "_score.csv"
-                score_path = os.path.join("data", "Buildings_score",score_name)
+                score_path = os.path.join("data", "buildings_score",score_name)
                 results_df.to_csv(score_path, index=False)
                 
     print("\n"+"Displays the mean of all R2_scores for all datasets used")

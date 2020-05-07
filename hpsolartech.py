@@ -121,8 +121,6 @@ def create_building_files():
                     print("------------------------------------------------------------")
                 elif status_code == 0:
                     print("'save_smhi_parameters_to_csv' was given an empty parameter_dict")
-                if building_count ==3:
-                    return
         print("Couldn't find building_id: " + wanted_id)
 def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 

@@ -133,7 +133,7 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
         print(msg)
     
     
-    path = os.path.join("data", "Buildings_results", str(id_number) + "_results.csv")
+    path = os.path.join("data", "buildings_results", str(id_number) + "_results.csv")
     results_df.to_csv(path)
 
     df = pd.DataFrame(rows_list)
