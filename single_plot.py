@@ -13,4 +13,4 @@ from visualize_data import plot_date_and_parameter
             Plots the real output and the predicted output for a chosen model-scalar combination
 """
 results_path = os.path.join("data", "results_sun.csv")    
-plot_date_and_parameter(parameter=["real_output", "PowerTransformer-Yeo-Johnson_RFR"], path=results_path)
+plot_date_and_parameter(parameter=["real_output", "StandardScaler_KNN"], path=results_path)

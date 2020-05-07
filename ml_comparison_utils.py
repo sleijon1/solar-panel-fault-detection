@@ -12,7 +12,7 @@ from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 import os
-
+from sklearn import neighbors
 
 def create_pipelines(verbose=1):
     """
@@ -22,21 +22,22 @@ def create_pipelines(verbose=1):
     """
 
     models = [
-              ('LR', LinearRegression()),
-              ('DTR', DecisionTreeRegressor(max_depth = 10, random_state = 42)),
+             # ('LR', LinearRegression()),
+              #('DTR', DecisionTreeRegressor(max_depth = 10, random_state = 42)),
              #('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='relu', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
-              ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
+             # ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
               #('LASSO',Lasso(alpha=0.1))
+              ('KNN',neighbors.KNeighborsRegressor(n_neighbors = 10, weights = "distance", algorithm = "ball_tree"))
               ]
     scalers = [
                ('StandardScaler', StandardScaler()),
-               #('MinMaxScaler', MinMaxScaler()),
-               #('MaxAbsScaler', MaxAbsScaler()),
+               ('MinMaxScaler', MinMaxScaler()),
+               ('MaxAbsScaler', MaxAbsScaler()),
                ('RobustScaler', RobustScaler()),
                ('QuantileTransformer-Normal', QuantileTransformer(output_distribution='normal')),
-               #('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
+               ('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
                ('PowerTransformer-Yeo-Johnson', PowerTransformer(method='yeo-johnson')),
-               #('Normalizer', Normalizer())
+               ('Normalizer', Normalizer())
                ]
                
     # Create pipelines
@@ -93,7 +94,7 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
     X_test.drop("date", axis=1)
 
     for name, model in pipelines:
-        kfold = model_selection.StratifiedKFold(n_splits=num_folds, random_state=seed, shuffle=True)
+        kfold = model_selection.KFold(n_splits=num_folds, random_state=seed, shuffle=True)
         cv_results = model_selection.cross_val_score(model, X_train, y_train, cv=kfold, n_jobs=n_jobs, scoring=scoring)
         R2_scores.append(cv_results.mean())
         names.append(name)
