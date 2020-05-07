@@ -6,6 +6,9 @@ from sklearn.utils.validation import column_or_1d
 from sun_parser import SunParser
 from ml_comparison_utils import (create_pipelines, run_cv_and_test)
 from display_results import display_results
+
+"Parts of the code is taken from https://github.com/shaygeller/Normalization_vs_Standardization by Shay Geller"
+
 # Global_vars
 num_folds = 10
 n_jobs = -1

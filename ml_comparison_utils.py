@@ -14,6 +14,8 @@ from sklearn import metrics
 import os
 from sklearn import neighbors
 
+"Parts of the code is taken from https://github.com/shaygeller/Normalization_vs_Standardization by Shay Geller"
+
 def create_pipelines(verbose=1):
     """
          Creates a list of pipelines with models and scalers.

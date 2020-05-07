@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+"Parts of the code is taken from https://github.com/shaygeller/Normalization_vs_Standardization by Shay Geller"
+
 class SunParser(object):
     def __init__(self, file_name):
         self.file_path = file_name
