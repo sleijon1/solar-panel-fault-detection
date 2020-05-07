@@ -8,6 +8,5 @@ from __future__ import print_function
 
 import os
 from visualize_data import plot_date_and_parameter
-
 results_path = os.path.join("data", "results_sun.csv")    
-plot_date_and_parameter(parameter=["real_output", "MinMaxScaler_MLP"], path=results_path)
+plot_date_and_parameter(parameter=["real_output", "PowerTransformer-Yeo-Johnson_RFR"], path=results_path)
