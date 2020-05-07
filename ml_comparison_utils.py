@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler, Ro
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn import metrics
 import os
 from sklearn import neighbors
@@ -24,12 +25,13 @@ def create_pipelines(verbose=1):
     """
 
     models = [
-             # ('LR', LinearRegression()),
+              #('LR', LinearRegression()),
               #('DTR', DecisionTreeRegressor(max_depth = 10, random_state = 42)),
-             #('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='relu', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
-             # ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
+              #('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='relu', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
+              #('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
               #('LASSO',Lasso(alpha=0.1))
-              ('KNN',neighbors.KNeighborsRegressor(n_neighbors = 10, weights = "distance", algorithm = "ball_tree"))
+              #('KNN',neighbors.KNeighborsRegressor(n_neighbors = 10, weights = "distance", algorithm = "ball_tree"))
+              ('GPR', GaussianProcessRegressor())
               ]
     scalers = [
                ('StandardScaler', StandardScaler()),
