@@ -21,7 +21,7 @@ class SunParser(object):
         """
             -Read csv data
             -Drop nan values
-            -Parameters for time series is created
+            -Parameters for time series is created (sliding window and cyclical features)
             -Split to X for features and y for labels
         """
         data = pd.read_csv(self.file_path)

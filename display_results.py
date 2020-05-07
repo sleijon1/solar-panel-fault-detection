@@ -10,7 +10,8 @@ import pandas as pd
 
 def display_results():
     """
-            Displays the mean score for all models
+            Displays the mean score for all models-scalar combinations in a pivot table
+            
     """
     mean_df = pd.DataFrame()
     id_number = 0

@@ -13,7 +13,11 @@ is_save_results = True
 
 
 if __name__ == '__main__':
-    
+    """
+            -For all different id numbers in the folder, do CV and generate R2 score. 
+            -For all mode-scalar combinations, display the mean R2 score for all the id numbers 
+            -Write these R2 scores to a csv file
+        """
     #For all data files in the folder
     for filename in os.listdir(os.path.join("data")):
         if filename.endswith("_new.csv"):
@@ -33,7 +37,7 @@ if __name__ == '__main__':
             pipelines = create_pipelines()
             
             # Run CV together with a test on the test set
-            results_df = run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,1234,num_folds,id_number, n_jobs=n_jobs)
+            results_df = run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,1234,num_folds,id_number)
             
             
             # Save cv experiment to csv
@@ -42,7 +46,7 @@ if __name__ == '__main__':
                 score_path = os.path.join("data",score_name)
                 results_df.to_csv(score_path, index=False)
                 
-            print("\n"+"Displays the mean of all R2_scores for all datasets used")
-            display_results()
+    print("\n"+"Displays the mean of all R2_scores for all datasets used")
+    display_results()
             
     

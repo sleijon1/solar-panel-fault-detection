@@ -17,26 +17,26 @@ import os
 def create_pipelines(verbose=1):
     """
          Creates a list of pipelines with models and scalers.
-
+         verbose -- to print or not to print, 1 or 0
     :return:
     """
 
     models = [
               ('LR', LinearRegression()),
               ('DTR', DecisionTreeRegressor(max_depth = 10, random_state = 42)),
-             # ('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='relu', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
-              #('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
+             #('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='relu', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
+              ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
               #('LASSO',Lasso(alpha=0.1))
               ]
     scalers = [
                ('StandardScaler', StandardScaler()),
-               ('MinMaxScaler', MinMaxScaler()),
-               ('MaxAbsScaler', MaxAbsScaler()),
+               #('MinMaxScaler', MinMaxScaler()),
+               #('MaxAbsScaler', MaxAbsScaler()),
                ('RobustScaler', RobustScaler()),
                ('QuantileTransformer-Normal', QuantileTransformer(output_distribution='normal')),
-               ('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
+               #('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
                ('PowerTransformer-Yeo-Johnson', PowerTransformer(method='yeo-johnson')),
-               ('Normalizer', Normalizer())
+               #('Normalizer', Normalizer())
                ]
                
     # Create pipelines
@@ -56,13 +56,24 @@ def create_pipelines(verbose=1):
     return pipelines
 
 
-def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, num_folds, id_number, n_jobs):
+def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, num_folds, id_number, n_jobs = -1):
     """
 
         Iterate over the pipelines, calculate R2-score for the CV, fit on train and predict on test.
         Return the results in a dataframe.
         
+        Write all predictions to a csv file.
+        
         As a sideeffect the predictions for each model-scalar is written to a file
+        X_train -- The X for the training set, A dataframe where each column is a parameter and each row is a datapoint
+        y_train -- The y for the training set, An array where each value is the output for a datapoint
+        X_test -- The X for the test set, A dataframe where each column is a parameter and each row is a datapoint
+        y_test -- The y for the test set, An array where each value is the output for a datapoint
+        pipelines -- The pipelines containing all model-scalar combinations 
+        scoring -- The scoring metric used for evaluation, e.g. 'r2' for R2-score or 'neg_root_mean_squared_error' for RMSE
+        seed -- The random_state seed used in kfold
+        num_folds -- Number of folds in the kfold
+        id_number -- The id for the dataset that is currently running
 
     """
     #ignores div by 0 errors as to nut clutter the output
@@ -82,7 +93,7 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
     X_test.drop("date", axis=1)
 
     for name, model in pipelines:
-        kfold = model_selection.KFold(n_splits=num_folds, random_state=seed, shuffle=True)
+        kfold = model_selection.StratifiedKFold(n_splits=num_folds, random_state=seed, shuffle=True)
         cv_results = model_selection.cross_val_score(model, X_train, y_train, cv=kfold, n_jobs=n_jobs, scoring=scoring)
         R2_scores.append(cv_results.mean())
         names.append(name)
@@ -127,8 +138,10 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
 
 def check_seperation_line(name, prev_clf_name, rows_list):
     """
-        Add empty row if different classifier ending
-
+        Add empty row if different model-scalar ending (If new model, add new row)
+        name -- model-scalar name
+        prev_clf_name -- previous model-scalar name
+        rows_list -- The list containing the result_dictionary
     """
 
     clf_name = name.split("_")[1]
