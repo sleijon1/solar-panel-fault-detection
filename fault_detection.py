@@ -13,8 +13,7 @@ import math
 from statistics import mean
 
 
-def detect_error(decreased_y, predicted_y):
-    time_horizon = 7 * 24
+def detect_error(decreased_y, predicted_y, threshold, time_horizon=7*24):
     all_values = []
     
     if time_horizon > len(decreased_y):
@@ -107,12 +106,59 @@ def parse_and_simulate(building_id, decrease_perc):
     model_data = (X_train, X_test, y_train, y_test, decreased_y, date)
     return model_data
 
+def create_confusion_matrix(threshold, results):
+    counter = [0, 0, 0]
+    for key in results.keys():
+        if key[1] == threshold:
+            counter = [a + b for a, b in zip(counter, results[key])]
+    return counter
 
-if __name__ == '__main__':
+def evaluate_fault_detection():
+    decrease_lists = [[(0, 1, .4)], [(0, 1, .5)], [(0, 1, .6)], [(0, 1, .7)], \
+                      [(0, 1, .8)], [(0, 1, .9)]]
+    thresholds = [35, 40, 45, 50, 55, 60]
+    results = {}
+    time_horizon = 7*24
+    for filename in os.listdir(os.path.join("data", "buildings")):
+        if filename.endswith(".csv") and not filename.endswith("734012530000024618.csv") and not filename.endswith("734012530000027879.csv") and not filename.endswith("734012530000027909.csv"):
+            id_number = filename[:18]
+            for decrease in decrease_lists:
+                model_data = parse_and_simulate(id_number, decrease)
+                decreased_y = model_data[4]
+                real_y = model_data[3]
+                perc_decrease = decrease[0][2]
+                predicted_y = train_and_predict(model_data, "RFR", "SS")
+                for threshold in thresholds:
+                    key = (perc_decrease, threshold, time_horizon)
+                    try:
+                        test = results[key]
+                    except KeyError:
+                        results[key] = [0, 0, 0]
+                        
+                    decreased_error_found, days_gone_decreased = detect_error(decreased_y, \
+                                                                              predicted_y, threshold, time_horizon)
+                    real_error_found, days_gone_real = detect_error(real_y, predicted_y, threshold, time_horizon)
+                    
+                    if decreased_error_found and not real_error_found:
+                        results[key][0] += 1
+                    elif real_error_found:
+                        results[key][1] += 1
+                    elif not decreased_error_found and not real_error_found:
+                        results[key][2] += 1
+
+                    print("id: " + str(id_number) + ", decrease: " + str(perc_decrease) + ", threshold: " + str(threshold))
+    
+    for threshold in thresholds:
+        matrix = create_confusion_matrix(threshold, results)
+        print("Threshold: " + str(threshold) + ", Matrix: " + str(matrix))
+    return None
+
+
+def run_fault_detection():
     decrease_list = [(0, 1, 0.6)]
-    real_fault = 0
-    fake_news = 0
-    empty_life = 0
+    true_positive = 0
+    false_positive = 0
+    false_negative = 0
     mean_days_gone = []
     for filename in os.listdir(os.path.join("data", "buildings")):
         if filename.endswith(".csv") and not filename.endswith("734012530000024618.csv") and not filename.endswith("734012530000027879.csv") and not filename.endswith("734012530000027909.csv"):
@@ -123,25 +169,28 @@ if __name__ == '__main__':
             real_y = model_data[3]
             predicted_y = train_and_predict(model_data, "RFR", "SS")
             
-            decreased_error_found, days_gone_decreased = detect_error(decreased_y, predicted_y)
-            real_error_found, days_gone_real = detect_error(real_y, predicted_y)
+            decreased_error_found, days_gone_decreased = detect_error(decreased_y, predicted_y, threshold)
+            real_error_found, days_gone_real = detect_error(real_y, predicted_y, threshold)
             
             
             print(str(id_number))
             if decreased_error_found and not real_error_found:
-                print("Real fault found in " + str(days_gone_decreased) + " days")
+                print("True positive found in " + str(days_gone_decreased) + " days")
                 mean_days_gone.append(days_gone_decreased)
-                real_fault +=1
+                true_positive +=1
             elif real_error_found:
-                print("Preexisting fault found in " + str(days_gone_real) + " days")
-                fake_news +=1
+                print("False positive found in " + str(days_gone_real) + " days")
+                false_positive +=1
             elif not decreased_error_found and not real_error_found:
-                print("No faults found")
-                empty_life +=1
+                print("False negative found")
+                false_negative +=1
             else:
                 print("dunno")
-    print("Real_faults found: " + str(real_fault))
-    print("Fake faults found: " + str(fake_news))
-    print("Nothing found: " + str(empty_life))
+    print("true_positives found: " + str(true_positive))
+    print("Fake faults found: " + str(false_positive))
+    print("Nothing found: " + str(false_negative))
     print("Average days til error found: " + str(mean(mean_days_gone)))
                 
+
+if __name__ == '__main__':
+    evaluate_fault_detection()
