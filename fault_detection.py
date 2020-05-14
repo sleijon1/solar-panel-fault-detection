@@ -79,8 +79,8 @@ def train_and_predict(model_data, model_name, scaler_name):
     
     R2_score = metrics.r2_score(y_test, y_pred)
     R2_score_dec = metrics.r2_score(y_test_dec, y_pred)
-    print("R2 score without simulating fault: " + str(R2_score) + "\nR2 score with simulated fault: "\
-          + str(R2_score_dec))
+    #print("R2 score without simulating fault: " + str(R2_score) + "\nR2 score with simulated fault: "\
+          #+ str(R2_score_dec))
 
     return y_pred
 
@@ -113,12 +113,13 @@ def create_confusion_matrix(threshold, results):
             counter = [a + b for a, b in zip(counter, results[key])]
     return counter
 
-def evaluate_fault_detection():
-    decrease_lists = [[(0, 1, .4)], [(0, 1, .5)], [(0, 1, .6)], [(0, 1, .7)], \
-                      [(0, 1, .8)], [(0, 1, .9)]]
+def evaluate_fault_detection(perc_decrease):
+    decrease_lists = [[(0, 1, perc_decrease)]]
     thresholds = [35, 40, 45, 50, 55, 60]
     results = {}
     time_horizon = 7*24
+    mean_days_gone = {}
+
     for filename in os.listdir(os.path.join("data", "buildings")):
         if filename.endswith(".csv") and not filename.endswith("734012530000024618.csv") and not filename.endswith("734012530000027879.csv") and not filename.endswith("734012530000027909.csv"):
             id_number = filename[:18]
@@ -140,18 +141,23 @@ def evaluate_fault_detection():
                     real_error_found, days_gone_real = detect_error(real_y, predicted_y, threshold, time_horizon)
                     
                     if decreased_error_found and not real_error_found:
+                        try:
+                            mean_days_gone[threshold].append(days_gone_decreased)
+                        except KeyError:
+                            mean_days_gone[threshold] = []
+                            mean_days_gone[threshold].append(days_gone_decreased)
                         results[key][0] += 1
                     elif real_error_found:
                         results[key][1] += 1
                     elif not decreased_error_found and not real_error_found:
                         results[key][2] += 1
 
-                    print("id: " + str(id_number) + ", decrease: " + str(perc_decrease) + ", threshold: " + str(threshold))
-    
+                    #print("id: " + str(id_number) + ", decrease: " + str(perc_decrease) + ", threshold: " + str(threshold))
+    print("Currently simulating a " + str((1-perc_decrease)*100) + "% decrease.")
     for threshold in thresholds:
         matrix = create_confusion_matrix(threshold, results)
         print("Threshold: " + str(threshold) + ", Matrix: " + str(matrix))
-    return None
+        print("Average days til error found: " + str(mean(mean_days_gone[threshold])))
 
 
 def run_fault_detection():
@@ -193,4 +199,6 @@ def run_fault_detection():
                 
 
 if __name__ == '__main__':
-    evaluate_fault_detection()
+    decreases = [.6, .5, .4]
+    for decrease in decreases:
+        evaluate_fault_detection(decrease)
