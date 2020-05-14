@@ -25,23 +25,23 @@ def create_pipelines(verbose=1):
     """
 
     models = [
-              ('LR', LinearRegression()),
+              #('LR', LinearRegression()),
               #('DTR', DecisionTreeRegressor(max_depth = 10, random_state = 42)),
               #('MLP',MLPRegressor(hidden_layer_sizes=(100,),  activation='relu', solver='adam', alpha=0.0001, batch_size='auto', learning_rate='adaptive', learning_rate_init=0.01, power_t=0.5, max_iter=1000, shuffle=False,random_state=0, tol=0.0001, verbose=False, warm_start=False,early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)),
-              #('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
+              ('RFR',RandomForestRegressor(n_estimators = 100, random_state = 42)),
               #('LASSO',Lasso(alpha=0.1))
               #('KNN',neighbors.KNeighborsRegressor(n_neighbors = 10, weights = "distance", algorithm = "ball_tree"))
               #('GPR', GaussianProcessRegressor())
               ]
     scalers = [
-               ('StandardScaler', StandardScaler()),
-               ('MinMaxScaler', MinMaxScaler()),
-               ('MaxAbsScaler', MaxAbsScaler()),
-               ('RobustScaler', RobustScaler()),
-               ('QuantileTransformer-Normal', QuantileTransformer(output_distribution='normal')),
-               ('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
+               #('StandardScaler', StandardScaler()),
+               #('MinMaxScaler', MinMaxScaler()),
+               #('MaxAbsScaler', MaxAbsScaler()),
+               #('RobustScaler', RobustScaler()),
+               #('QuantileTransformer-Normal', QuantileTransformer(output_distribution='normal')),
+               #('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
                ('PowerTransformer-Yeo-Johnson', PowerTransformer(method='yeo-johnson')),
-               ('Normalizer', Normalizer())
+               #('Normalizer', Normalizer())
                ]
                
     # Create pipelines
@@ -133,7 +133,7 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
         print(msg)
     
     
-    path = os.path.join("data", "buildings_results", str(id_number) + "_results.csv")
+    path = os.path.join("data", "buildings_result", str(id_number) + "_results.csv")
     results_df.to_csv(path)
 
     df = pd.DataFrame(rows_list)

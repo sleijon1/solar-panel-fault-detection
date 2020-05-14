@@ -43,10 +43,22 @@ class SunParser(object):
         data.drop(columns=["date_real", "hour", "month", "date_temp"], axis=1, inplace=True)
           
         data = data.dropna()
+        date_remove = []
+        for date, index in zip(data["date"], data.index):
+            real_date = datetime.fromtimestamp(date/1000)
+            if real_date.month > 10 or real_date.month < 2:
+                date_remove.append(index)
+            
+        data.drop(date_remove, inplace=True)
         
-        #Sliding window 
-        for i in range(1,5):    
-            data["prev_output_" + str(i)] = data["output"].shift(i)       
+        #Sliding window    
+        data["prev_output"] = data["output"].shift(1)
+        remove_list = []
+        for prev_date, date, prev_output, index in zip(data["date"], data["date"].shift(1), data["prev_output"], data.index):
+            if(prev_date - date) > 7200000:
+                remove_list.append(index)
+        
+        data.drop(remove_list, inplace=True)
         
         #removes rows in the beginning and end that was created after the sliding window    
         data = data.dropna()
