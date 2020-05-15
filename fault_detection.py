@@ -117,7 +117,7 @@ def evaluate_fault_detection(perc_decrease):
     decrease_lists = [[(0, 1, perc_decrease)]]
     thresholds = [35, 40, 45, 50, 55, 60]
     results = {}
-    time_horizon = 7*24
+    time_horizon = 5*24
     mean_days_gone = {}
 
     for filename in os.listdir(os.path.join("data", "buildings")):
@@ -153,7 +153,7 @@ def evaluate_fault_detection(perc_decrease):
                         results[key][2] += 1
 
                     #print("id: " + str(id_number) + ", decrease: " + str(perc_decrease) + ", threshold: " + str(threshold))
-    print("Currently simulating a " + str((1-perc_decrease)*100) + "% decrease.")
+    print("Currently simulating a " + str((1-perc_decrease)*100) + "% decrease. With a " + str(time_horizon/24) + "day time horizon.")
     for threshold in thresholds:
         matrix = create_confusion_matrix(threshold, results)
         print("Threshold: " + str(threshold) + ", Matrix: " + str(matrix))
