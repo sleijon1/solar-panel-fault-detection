@@ -157,8 +157,10 @@ def evaluate_fault_detection(perc_decrease):
     for threshold in thresholds:
         matrix = create_confusion_matrix(threshold, results)
         print("Threshold: " + str(threshold) + ", Matrix: " + str(matrix))
-        print("Average days til error found: " + str(mean(mean_days_gone[threshold])))
-
+        try:
+            print("Average days til error found: " + str(mean(mean_days_gone[threshold])))
+        except:
+            print("Average days til error found: No errors found")
 
 def run_fault_detection():
     decrease_list = [(0, 1, 0.6)]
@@ -199,6 +201,6 @@ def run_fault_detection():
                 
 
 if __name__ == '__main__':
-    decreases = [.6, .5, .4]
+    decreases = [.5]
     for decrease in decreases:
         evaluate_fault_detection(decrease)

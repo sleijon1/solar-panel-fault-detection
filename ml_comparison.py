@@ -27,6 +27,13 @@ if __name__ == '__main__':
             id_number = filename[:18]
             path = os.path.join("data","buildings",(str(id_number)) + ".csv")
             # Read datasets
+            print("Preprocessing the data...")
+            print("\tAdding: Sin for hour")
+            print("\tAdding: Cos for hour")
+            print("\tAdding: Sin for month")
+            print("\tAdding: Cos for month")
+            print("\tAdding: Previous output")
+            print("\tDropping: NaN values")
             parser = SunParser(path)
             scoring = parser.metric
             print("Generating expected output...")
