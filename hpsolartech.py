@@ -91,6 +91,9 @@ def create_building_files():
                 longitude = row['Longitude']
                 zip_code =  row['ZipCode']
 
+                if building_id != "734012530000022652":
+                    continue
+
                 if zip_code == "0" and latitude == "null" and longitude == "null":
                     print("No geographical data, skipping " + building_id)
                     skipped_buildings += 1
@@ -107,7 +110,7 @@ def create_building_files():
                         print("Couldn't retrieve lat,long from zip code for building " + building_id)
                         skipped_buildings += 1
                         continue
-
+                print("------------------------------------------------------------")           
                 print("Building_id: " + str(building_id))
                 latitude = float(latitude)
                 longitude = float(longitude)
@@ -116,12 +119,11 @@ def create_building_files():
                 status_code = smhi_fetch.save_smhi_parameters_to_csv(data, latitude, longitude, path)
                 if status_code == 1:
                     building_count += 1
-                    print("Building done: " + building_id + ", Total buildings done: " \
-                      + str(building_count))
+                    print("Building done: " + building_id)
                     print("------------------------------------------------------------")
                 elif status_code == 0:
                     print("'save_smhi_parameters_to_csv' was given an empty parameter_dict")
-        print("Couldn't find building_id: " + wanted_id)
+        #print("Couldn't find building_id: " + wanted_id)
 def read_hpsolartech_data():
     """ Returns values of power output for all buildings contained in 
     hpsolartech_data.csv as a dictionary
@@ -237,17 +239,6 @@ def fill_hpsolartech_files(verbose=False):
             csvs_written += 1
         else:
             csvs_not_found += 1
-
-
-    longest_line = "# Csv files written to: " + str(csvs_written) + " #"
-    length = len(longest_line)
-
-    print("")
-    print(length*"#")
-    print("# Building_ids found: " + str(csvs_written+csvs_not_found) + (length-(len(str(csvs_written+csvs_not_found))+23))*" " +  "#")
-    print("# Csv files written to: " + str(csvs_written) + " #")
-    print("# Missing csv files: " + str(csvs_not_found) + (length-(len(str(csvs_not_found))+22))*" " +  "#")
-    print(length*"#")
 
 if __name__ == "__main__":
     #print_good_building_ids()

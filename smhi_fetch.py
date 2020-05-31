@@ -41,7 +41,10 @@ def return_nearest_station(pv_cords, parameter_ids, period):
     period -- time frame of retrieval
     """
     station_ids = []
+    i=1
     for parameter_id in parameter_ids:
+        print("\tFinding nearest SMHI station for parameter: (" + str(i) + "/" + str(len(parameter_ids)) + ") " + list(PARAMETERS.keys())[list(PARAMETERS.values()).index(parameter_id)][:-3])
+        i=i+1
         try:
             stations = PARAM_TO_STATIONS[parameter_id]
         except KeyError:
@@ -118,6 +121,7 @@ def fetch_smhi_parameter_csv(station_id, parameter_id, period, version):
         +"/station/"+str(station_id)+"/period/"+period+"/data.csv"
     url = base_url + api_call
     response = requests.get(url)
+
     return(response.text)
 
 
@@ -134,7 +138,10 @@ def fetch_smhi_parameters_csv(station_ids, parameters, period, first_date, versi
     """
 
     parameter_dicts = {}
+    i=1
     for station_id, parameter in zip(station_ids, parameters.keys()):
+        print("\tFetching data for parameter: (" + str(i) + "/" + str(len(parameters)) + ") "+ parameter[:-3])
+        i=i+1
         try:
             parameter_data = fetch_smhi_parameter_csv(station_id, parameters[parameter], period, version)
             cutoff = parameter_data.find(first_date)
@@ -257,14 +264,17 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
     Keyword arguments:
     parameter_dicts -- dictionary containing dictionaries of parameters
     """
-    print("Calculating timestamps...")
+    print("Syncing parameter dates...")
     if parameter_dicts is None:
         print("No parameter data given to 'save_smhi_parameters_to_csv', corrected-archive might be returning old data.")
         return 0
     # Get all unixtimestamps (dates)
     dates = []
     remove_dates = []
+    i=1
     for parameter in parameter_dicts:
+        print("\tSyncing parameter: (" + str(i) + "/"+ str(len(parameter_dicts)) + ") " + parameter[:-3])
+        i=i+1
         parameter_dict = parameter_dicts[parameter]
         for date in parameter_dict.keys():
             if date not in dates:
@@ -272,13 +282,13 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
 
     start_date = str(min(dates))
     end_date = str(max(dates))
-    print("\tmin:" + start_date + ", max:" + end_date)
-    print("Fetching strong data...")
+    #print("\tmin:" + start_date + ", max:" + end_date)
+    print("Fetching STRONG data...")
 
     start_date_readable = datetime.utcfromtimestamp(int(start_date)/1000)
     end_date_readable = datetime.utcfromtimestamp(int(end_date)/1000)
     print("\tStart: " + str(start_date_readable))
-    print("\tEnd: " + str(end_date_readable))
+    print("\tEnd:   " + str(end_date_readable))
 
     strong_data = get_strong_data(min(dates), max(dates), latitude, longitude)
     parameter_dicts["sun_hours_id"] = strong_data
@@ -288,7 +298,7 @@ def save_smhi_parameters_to_csv(parameter_dicts, latitude, longitude, filename="
         file_handle = open(filename, 'w', newline='')
     except FileNotFoundError:
         print("FileNotFoundError, probably because no folder exists at 'data/buildings'.")
-    print("Writing to csv...")
+    print("Writing to CSV...")
     with file_handle:
         writer = csv.writer(file_handle)
         titles = ["date"]
@@ -343,7 +353,7 @@ def get_smhi_data_from_stations(station_ids, parameters, period, first_date):
     return data
 
 def get_smhi_data_from_coordinates(latitude, longitude, period, first_date, parameters=PARAMETERS):
-    print("Fetching smhi data...")
+    print("Fetching SMHI data...")
     station_ids = return_nearest_station([latitude, longitude], parameters.values(), period)
     data = get_smhi_data_from_stations(station_ids, parameters, period, first_date)
     return data
