@@ -40,23 +40,20 @@ def create_pipelines(verbose=1):
                #('RobustScaler', RobustScaler()),
                #('QuantileTransformer-Normal', QuantileTransformer(output_distribution='normal')),
                #('QuantileTransformer-Uniform', QuantileTransformer(output_distribution='uniform')),
-               ('PowerTransformer-Yeo-Johnson', PowerTransformer(method='yeo-johnson')),
+               #('PowerTransformer-Yeo-Johnson', PowerTransformer(method='yeo-johnson')),
                #('Normalizer', Normalizer())
                ]
                
     # Create pipelines
     pipelines = []
+
     for model in models:
-        
+        model_name = "_" + model[0]
+        pipelines.append((model_name, Pipeline([model])))
         # Append model+scaler
         for scalar in scalers:
             model_name = scalar[0] + "_" + model[0]
             pipelines.append((model_name, Pipeline([scalar, model])))
-
-    if verbose:
-        print("Created these pipelines:")
-        for pipe in pipelines:
-            print(pipe[0])
 
     return pipelines
 
@@ -98,12 +95,15 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
     X_test.drop("date", axis=1)
 
     for name, model in pipelines:
+        print("\tPerforming KFold cross-validation.")
         kfold = model_selection.KFold(n_splits=num_folds, random_state=seed, shuffle=True)
         cv_results = model_selection.cross_val_score(model, X_train, y_train, cv=kfold, n_jobs=n_jobs, scoring=scoring)
         R2_scores.append(cv_results.mean())
         names.append(name)
 
+        print("\tFitting the model on the training set.")
         model.fit(X_train, y_train)
+        print("\tPredicting on the test set.")
         y_pred = model.predict(X_test)
         #all negative values are corrected to 0
         y_pred = y_pred.clip(min=0)
@@ -126,11 +126,11 @@ def run_cv_and_test(X_train, y_train, X_test, y_test, pipelines, scoring,seed, n
         
         results_df[name] = predictions
     
-    
-    print("#" * 30 + "Results" + "#" * 30)
     for name,R2_score,test_score in zip(names, R2_scores, test_scores):
-        msg = "%s: R2-score:%f Test score:%f" % (name, R2_score, test_score)
-        print(msg)
+        #msg = "%s: R2-score:%f Test score:%f" % (name, R2_score, test_score)
+        print("R2-scores: ")
+        print("\tKFold:    " + str(round(R2_score,4)))
+        print("\tTest set: " + str(round(test_score,4)))
     
     
     path = os.path.join("data", "buildings_result", str(id_number) + "_results.csv")

@@ -27,6 +27,7 @@ class SunParser(object):
             -Split to X for features and y for labels
         """
         data = pd.read_csv(self.file_path)
+        print("Preprocessing the data...")
         data = data.dropna()
         data["date_temp"] = data["date"].divide(1000)
         data["date_real"] = data["date_temp"].map(datetime.utcfromtimestamp)
@@ -34,6 +35,10 @@ class SunParser(object):
         data["month"] = data["date_real"].map(lambda x: x.month)
         
         #Cyclical features hours and months represented as parameters
+        print("\tAdding: Sin for hour")
+        print("\tAdding: Cos for hour")
+        print("\tAdding: Sin for month")
+        print("\tAdding: Cos for month")
         data['hr_sin'] = np.sin(data.hour*(2.*np.pi/24))
         data['hr_cos'] = np.cos(data.hour*(2.*np.pi/24))
         data['mnth_sin'] = np.sin((data.month-1)*(2.*np.pi/12))
@@ -51,7 +56,9 @@ class SunParser(object):
             
         data.drop(date_remove, inplace=True)
         
-        #Sliding window    
+        #Sliding window
+        print("\tAdding: Previous output")
+        print("\tDropping: NaN values")
         data["prev_output"] = data["output"].shift(1)
         remove_list = []
         for prev_date, date, prev_output, index in zip(data["date"], data["date"].shift(1), data["prev_output"], data.index):

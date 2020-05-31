@@ -29,8 +29,7 @@ if __name__ == '__main__':
             # Read datasets
             parser = SunParser(path)
             scoring = parser.metric
-            print("")
-            print("Working on " + str(id_number) + " dataset")
+            print("Generating expected output...")
                 
             X, y = parser.X, parser.y
             
@@ -49,7 +48,7 @@ if __name__ == '__main__':
                 score_path = os.path.join("data", "buildings_score",score_name)
                 results_df.to_csv(score_path, index=False)
                 
-    print("\n"+"Displays the mean of all R2_scores for all datasets used")
-    display_results()
+    #print("\n"+"Displays the R2-score for the dataset")
+    #display_results()
             
     
