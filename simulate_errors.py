@@ -2,6 +2,7 @@ import pandas as pd
 import os
 
 def simulate_decrease(decrease_list, y_test):
+   print("\nInjecting Error / Simulating a decrease...")
    decreased_output = y_test.values.tolist()
    y_len = len(y_test)
    for decrease_info in decrease_list:

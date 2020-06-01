@@ -11,6 +11,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 import math
 from statistics import mean
+from visualize_data import plot_date_and_parameter
 
 
 def detect_error(decreased_y, predicted_y, threshold, time_horizon=7*24):
@@ -97,7 +98,7 @@ def parse_and_simulate(building_id, decrease_perc):
     #y_test = y
     
     decreased_y = simulate_decrease(decrease_perc, y_test)
-    
+    print("Searching for faults...")
     date_test = pd.DataFrame()
     date_test["date"] = X_test["date"]
     X_train.drop("date", axis=1)
@@ -115,9 +116,9 @@ def create_confusion_matrix(threshold, results):
 
 def evaluate_fault_detection(perc_decrease):
     decrease_lists = [[(0, 1, perc_decrease)]]
-    thresholds = [35, 40, 45, 50, 55, 60]
+    thresholds = [45]
     results = {}
-    time_horizon = 5*24
+    time_horizon = 14*24
     mean_days_gone = {}
 
     for filename in os.listdir(os.path.join("data", "buildings")):
@@ -153,16 +154,21 @@ def evaluate_fault_detection(perc_decrease):
                         results[key][2] += 1
 
                     #print("id: " + str(id_number) + ", decrease: " + str(perc_decrease) + ", threshold: " + str(threshold))
-    print("Currently simulating a " + str((1-perc_decrease)*100) + "% decrease. With a " + str(time_horizon/24) + "day time horizon.")
+    print("\tCurrently simulating a " + str(round((1-perc_decrease)*100)) + "% decrease with a " + str(time_horizon/24) + " day time horizon.")
     for threshold in thresholds:
         matrix = create_confusion_matrix(threshold, results)
-        print("Threshold: " + str(threshold) + ", Matrix: " + str(matrix))
+        print("\tThreshold is set at: " + str(threshold) + "%")
         try:
-            print("Average days til error found: " + str(mean(mean_days_gone[threshold])))
+            print("\tERROR FOUND! \n\tDays until error found: " + str(round(mean(mean_days_gone[threshold]))))
         except:
-            print("Average days til error found: No errors found")
+            print("\tNO ERROR FOUND!")
+    print("\tPlotting graph: Predicted vs Real output (simulated)")
+    id_number = 734012530000022652
+    results_path = os.path.join("data", "buildings_result", str(id_number) + "_results.csv")    
+    plot_date_and_parameter(lower_limit=None, upper_limit=1571011200000, parameter=["real_output", "RFR"], path=results_path, demo=True, percentage_decrease=perc_decrease)
 
 def run_fault_detection():
+    print("Running run_fault_detection")
     decrease_list = [(0, 1, 0.6)]
     true_positive = 0
     false_positive = 0
@@ -201,6 +207,6 @@ def run_fault_detection():
                 
 
 if __name__ == '__main__':
-    decreases = [.5]
+    decreases = [.4,.6,.8]
     for decrease in decreases:
         evaluate_fault_detection(decrease)
